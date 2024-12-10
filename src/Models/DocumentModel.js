@@ -88,6 +88,7 @@ export const getDocumentModule = async (type, id) => {
         const htmlContent = await DucumentTamplate(type, userdata)
         return htmlContent;
     } catch (error) {
-        console.log(error)
+        console.log('error in generate html template')
+        
     }
 }

@@ -13,7 +13,6 @@ import verifyJWT, { handleBase64Images } from "./src/Utils/MIddelware.js";
 import sendMail from "./src/Utils/email.service.js";
 import path from 'path'
 import { initCronJobs } from "./src/Utils/CronJob.js";
-import { fileURLToPath } from "url";
 config()
 const app = express()
 app.use(cors())
@@ -29,16 +28,16 @@ app.use('/api/tenents', tenents)
 app.use('/api/desh', deshrouter)
 
 app.post('/api/upload', verifyJWT, uploadAndProcessFiles(), (req, res) => {
-    // const fileUrls = req.uploadedFiles.map(file => ({
-    //     type: file.type,
-    //     name: file.filename,
-    //     path: `/uploads/${file.type}/${file.filename}`
-    // }));
+    const fileUrls = req.uploadedFiles.map(file => ({
+        type: file.type,
+        name: file.filename,
+        path: `/uploads/${file.type}/${file.filename}`
+    }));
 
     res.json({
         success: true,
         message: 'Files uploaded successfully',
-        files: req.uploadedFiles
+        files: fileUrls
     });
 });
 app.post('/api/base64', /* verifyJWT, */handleBase64Images() , (req, res) => {
@@ -50,8 +49,8 @@ app.post('/api/base64', /* verifyJWT, */handleBase64Images() , (req, res) => {
 
     res.json({
         success: true,
+        data :req.body,
         message: 'Files uploaded successfully',
-        files: req.uploadedFiles
     });
 });
 

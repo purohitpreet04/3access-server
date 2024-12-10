@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Property from "../DB/Schema/PropertySchema.js";
 import user from "../DB/Schema/userSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
+import logUserAction from "./ActivityController.js";
 
 export const AddnewProperty = async (req, res) => {
     try {
@@ -19,11 +20,29 @@ export const AddnewProperty = async (req, res) => {
 
             Object.assign(existingProperty, propertyData, { addedBy, addedByModel });
             await existingProperty.save();
+            await logUserAction(addedBy, 'EDIT', {
+                councilTaxPayer: propertyData.councilTaxPayer,
+                address: propertyData?.addresss,
+                area: propertyData?.area,
+                city: propertyData?.city,
+                postCode: propertyData?.postCode
+            }, 'Property', existingProperty._id, addedByModel);
             return res.status(200).json({ message: 'Property updated successfully', seviority: 'success', success: true });
 
         } else {
-            const newProperty = new Property({ ...propertyData, addedBy, addedByModel });
+            let visibleTo = []
+            if (['Staff'].includes(addedByModel)) {
+                visibleTo.push(addedBy)
+            }
+            const newProperty = new Property({ ...propertyData, addedBy, addedByModel, visibleTo });
             await newProperty.save();
+            await logUserAction(addedBy, 'ADD', {
+                councilTaxPayer: propertyData.councilTaxPayer,
+                address: propertyData?.addresss,
+                area: propertyData?.area,
+                city: propertyData?.city,
+                postCode: propertyData?.postCode
+            }, 'Property', newProperty._id, addedByModel);
             return res.status(201).json({ message: 'Property added successfully', seviority: 'success', success: true });
         }
     } catch (error) {
@@ -46,7 +65,7 @@ export const getAllComapny = async (req, res) => {
 }
 
 export const getAllProperty = async (req, res) => {
-    const { _id, search, page = 1, limit = 10, filterby, role } = req.query;
+    const { _id, search, page = 1, limit = 10, filterby, role, staffAddedByrole , staffAddedBy} = req.query;
     try {
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);
@@ -70,6 +89,7 @@ export const getAllProperty = async (req, res) => {
 
             query = {
                 $and: [
+                    { status: 0 },
                     searchConditions,
                     {
                         $or: [
@@ -81,17 +101,31 @@ export const getAllProperty = async (req, res) => {
                 ]
             };
         } else if (['staff', 'company-agent'].includes(role)) {
+            // query = {
+            //     $and: [
+            //         // {visibleTo: { $in: _id }},
+            //         { status: 0 },
+            //         searchConditions,
+            //         { addedBy: _id, addedByModel: 'Staff' },
+            //     ],
+            // };
+            let otherQuery = {}
+            if (['company'].includes(staffAddedByrole)) {
+                otherQuery['rslTypeGroup'] = staffAddedBy
+            }
             query = {
-                $and: [
+                visibleTo: { $in: _id },
+                $or: [
+                    // {visibleTo: { $in: _id }},
                     searchConditions,
-                    { addedBy: _id, addedByModel: 'Staff' },
-                    { visibleTo: { $in: _id } }
+                    { status: 0 },
+                    { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };
         } else {
             return res.status(403).json({ message: 'Access Denied' });
         }
-
+        // console.log(query)
         const totalProperties = await Property.countDocuments(query);
         // console.log(query)
         const properties = await Property.find(query)
@@ -192,14 +226,17 @@ export const getPropertyDetails = async (req, res) => {
 
 export const deleteProperty = async (req, res) => {
     try {
-        const { _id } = req.query;
-        const deletedProperty = await Property.findOneAndUpdate(_id, { status: 1 });
+        const { _id, addedByModel } = req.query;
+        const deletedProperty = await Property.findOneAndUpdate({ _id }, { status: 1 });
         if (!deletedProperty) {
             return res.status(404).json({ message: 'Property not found' });
         }
+        const userId = req.headers['user']
+        await logUserAction(userId, 'DELETE', {}, 'Property', _id, addedByModel);
         res.status(200).json({ message: 'Property deleted successfully', success: true });
     } catch (error) {
         // console.error(error);
+
         res.status(500).json({ message: 'Failed to delete property' });
     }
 };
@@ -221,6 +258,7 @@ export const getAllpropertyforTenants = async (req, res) => {
 
             query = {
                 $and: [
+                    { status: 0 },
                     // searchConditions,
                     {
                         $or: [
@@ -237,8 +275,11 @@ export const getAllpropertyforTenants = async (req, res) => {
                 otherQuery['rslTypeGroup'] = staffAddedBy
             }
             query = {
-                $and: [
+                visibleTo: { $in: _id },
+                $or: [
+                    // {visibleTo: { $in: _id }},
                     // searchConditions,
+                    { status: 0 },
                     { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };

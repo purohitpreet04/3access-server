@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { uploadImageToS3 } from './s3Config.js';
-import AWS from 'aws-sdk';
 import { s3 } from './s3.js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 config()
 function verifyJWT(req, res, next) {
     const token = req.headers['authorization']
@@ -37,7 +37,6 @@ export default verifyJWT
 
 
 export const handleBase64Images = () => {
-
     return async (req, res, next) => {
 
         for (let key in req.body) {
@@ -47,20 +46,17 @@ export const handleBase64Images = () => {
             if (typeof value === 'string' && value.startsWith('data:image/png;base64,')) {
                 try {
                     const base64Data = value.replace(/^data:image\/png;base64,/, '');
-                    // console.log(value)
                     const fileName = `${Date.now()}-${key}.png`;
-                    // const filePath = path.join(uploadDir, fileName);
                     const buffer = Buffer.from(base64Data, 'base64');
-                    // const s3res = await uploadImageToS3(buffer, 'signature')
-                    const s3res = await s3.upload({
+                    const params = {
                         Bucket: process.env.AWS_S3_BUCKET, // Your S3 bucket name
                         Key: `uploads/signatures/${fileName}`, // S3 object key
                         Body: buffer,
                         ContentType: 'image/png', // MIME type of the image
-                    }).promise();
-                    req.body[key] = s3res.Key
+                    }
+                    await s3.send(new PutObjectCommand(params));
+                    req.body[key] = `uploads/signatures/${fileName}`
                 } catch (err) {
-                    console.log(err)
                     return res.status(500).json({ error: "Failed to process image" });
                 }
             }

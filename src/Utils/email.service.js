@@ -18,9 +18,9 @@ config()
  */
 const sendMail = async ({ from, to, subject, text, html, attachments = [], cc, replyTo, bcc }) => {
   // Validate required fields
-  if (!from || !to || !subject || !text) {
+  if (!subject) {
     // console.error('Missing required email fields');
-    return { success: false, message: 'Required fields missing (from, to, subject, text)' };
+    return { success: false, message: 'Required fields missing (subject)' };
   }
 
   try {

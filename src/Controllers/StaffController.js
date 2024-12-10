@@ -4,6 +4,7 @@ import Staff from '../DB/Schema/StaffSchema.js';
 import mongoose, { Mongoose } from 'mongoose';
 import user from '../DB/Schema/userSchema.js';
 import Property from '../DB/Schema/PropertySchema.js';
+import logUserAction from './ActivityController.js';
 
 export const AddNewStaff = async (req, res) => {
     const { _id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
@@ -21,8 +22,9 @@ export const AddNewStaff = async (req, res) => {
         addedBy,
         permission,
         password,
-        Property_per
+        Property_per,
     };
+
 
     if (password) {
         staffData.password = await bcrypt.hash(password, 10);
@@ -84,7 +86,11 @@ export const AddNewStaff = async (req, res) => {
                 });
             }
             upadatePropertyPermmission(_id)
-            return res.status(200).json({ message: 'Staff updated successfully', staff: updatedStaff, severity: 'success', success: true });
+            await logUserAction(addedBy, 'EDIT', {
+                username, fname,
+                lname,
+            }, 'Staff', updatedStaff._id, req.query.addedByModel);
+            return res.status(200).json({ message: 'Staff updated successfully', severity: 'success', success: true });
         } else {
             const existingUser = await Staff.findOne({
                 $or: [
@@ -108,6 +114,10 @@ export const AddNewStaff = async (req, res) => {
                 upadatePropertyPermmission(newStaffdata?._id)
                 await user.findByIdAndUpdate(addedBy, { $addToSet: { [role === 'company-agent' ? "companyagent" : "staff"]: newStaffdata?._id } })
             }
+            await logUserAction(addedBy, 'ADD', {
+                username, fname,
+                lname,
+            }, 'Staff', newStaffdata._id, req.query.addedByModel);
             res.status(201).json({ message: 'Staff added successfully', severity: 'sucsess', success: true });
         }
     } catch (error) {
@@ -285,13 +295,16 @@ export const DeleteStaff = async (req, res) => {
                 }
             }
         );
-
+        const userId = req.headers['user']
         // Remove staff's visibility from properties
         await Property.updateMany(
             { visibleTo: staffId },
             { $pull: { visibleTo: staffId } }
         );
-
+        await logUserAction(userId, 'DELETE', {
+            username: deletedStaff?.username, fname: deletedStaff?.fname,
+            lname: deletedStaff?.lname,
+        }, 'Staff', deletedStaff._id, req.query.addedByModel);
         return res.status(200).json({
             success: true,
             message: 'Staff member deleted successfully',
@@ -299,7 +312,6 @@ export const DeleteStaff = async (req, res) => {
         });
 
     } catch (error) {
-        // console.error('Delete staff error:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error',

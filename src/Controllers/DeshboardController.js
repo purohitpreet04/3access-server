@@ -30,6 +30,7 @@ export const GetallProperty = async (req, res) => {
             query = {
                 $and: [
                     searchConditions,
+                    { status: 0 },
                     {
                         $or: [
                             { addedBy: _id },
@@ -45,8 +46,11 @@ export const GetallProperty = async (req, res) => {
                 otherQuery['rslTypeGroup'] = staffAddedBy
             }
             query = {
-                $and: [
+                visibleTo: { $in: _id },
+                $or: [
+                    // {visibleTo: { $in: _id }},
                     searchConditions,
+                    { status: 0 },
                     { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };

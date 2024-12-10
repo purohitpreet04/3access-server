@@ -374,7 +374,7 @@ Personal hygiene issues</p>
                 <em>Signature (resident):
             </strong>
         </p>
-        <img style="width: 150px;" src="${user?.confidentialityWaiverForm}"/>
+        <img loading="lazy" style="width: 150px;" src="${user?.confidentialityWaiverForm}"/>
         <p>&nbsp;</p>
         <p>&nbsp;</p>
         <p>&nbsp;</p>
@@ -383,7 +383,7 @@ Personal hygiene issues</p>
                 <em>Signature (on behalf of ${user?.rslDetails?.rslname || ''}):</em>
             </strong>
         </p>
-        <img style="width: 230px;" src="${user?.staffSignature}"/>
+        <img loading="lazy" style="width: 230px;" src="${user?.staffSignature}"/>
         <p>&nbsp;</p>
         <p>&nbsp;</p>
         <p>
@@ -446,7 +446,7 @@ Personal hygiene issues</p>
     <p>&nbsp;</p>
     <p>
         <em>
-            Signature: <img style="width: 150px;" src="${user?.licenseToOccupy}"/>
+            Signature: <img loading="lazy" style="width: 150px;" src="${user?.licenseToOccupy}"/>
         </em>
     </p>
     <p>&nbsp;</p>
@@ -1867,7 +1867,7 @@ Personal hygiene issues</p>
 </p>
 <p style="margin-top:0pt; margin-bottom:0pt; text-align:justify; line-height:normal">
     <span style="-aw-import:spaces"></span>
-    <img style="width: 150px;" src="${user?.licenseChargePayments}"/>
+    <img loading="lazy" style="width: 150px;" src="${user?.licenseChargePayments}"/>
 </p>
 <p style="margin-top:0pt; margin-bottom:0pt; text-align:justify; line-height:normal">
     <span style="font-family:'Courier New'; font-size:10pt">THIS LICENCE, effective from the date: 03-07-2024</span>
@@ -1904,7 +1904,7 @@ Personal hygiene issues</p>
 </p>
 <p style="margin-top:0pt; margin-bottom:8pt; text-align:justify">
     <span style="font-weight:bold">
-        Signed: <img style="width: 230px;" src="${user?.staffSignature}"/>
+        Signed: <img loading="lazy" style="width: 230px;" src="${user?.staffSignature}"/>
     </span>
 </p>
 <p style="margin-top:0pt; margin-bottom:8pt; text-indent:36pt">
@@ -1942,7 +1942,7 @@ Personal hygiene issues</p>
     <p>&nbsp;</p>
     <p>I <b>${user?.firstName || ''} ${user?.middleName || ''} ${user?.lastName || ''}</b> agree to pay my service charge of &pound;${user?.propertyDetails?.serviceCharges} per week.</p>
     <p>&nbsp;</p>
-    <p>Signed: <img style="width: 150px;" src="${user?.weeklyServiceCharge}"/></p>
+    <p>Signed: <img loading="lazy" style="width: 150px;" src="${user?.weeklyServiceCharge}"/></p>
     <p>Date: ${getDate(user?.signInDate)}</p>
     <p>&nbsp;</p>
     </div></div>`,
@@ -2017,12 +2017,12 @@ Personal hygiene issues</p>
         <p><b>Resident</b></p>
         <p>Name:${user?.firstName || ''} ${user?.middleName || ''} ${user?.lastName || ''}</p>
         <p>Signature:</p>
-        <p><img style="width: 150px;" src="${user?.fireEvacuationProcedure}"/></p>
+        <p><img  loading="lazy" style="width: 150px;" src="${user?.fireEvacuationProcedure}"/></p>
         <br>
         <p><b>Staff</b></p>
         <p>Name: ${user?.addedBy?.fname || ''} ${user?.addedBy.lname || ''} ${user?.addedBy?.role || ''}</p>
         <p>Signature:</p>
-        <p><img style="width: 230px;" src="${user?.staffSignature}"/></p>
+        <p><img loading="lazy" style="width: 230px;" src="${user?.staffSignature}"/></p>
     </div>
 </div></div>`,
 
@@ -2047,7 +2047,7 @@ Personal hygiene issues</p>
         <p>
             <em>
                 Kind regards (signature) :<br>
-                <img style="width: 150px;" src="${user?.authorizationForm}"/>
+                <img loading="lazy" style="width: 150px;" src="${user?.authorizationForm}"/>
             </em>
         </p>
         <p>&nbsp;</p>
@@ -2095,7 +2095,7 @@ Personal hygiene issues</p>
     <p>&nbsp;</p>
     <p>&nbsp;</p>
     <p>Name: <b>${user?.firstName || ''} ${user?.middleName || ''} ${user?.lastName || ''}</b></p>
-    <p>Signature: <img style="width: 150px;" src="${user?.missingPersonForm}"/></p>
+    <p>Signature: <img loading="lazy" style="width: 150px;" src="${user?.missingPersonForm}"/></p>
     <p>&nbsp;</p>
     <p>Date : ${getDate(user?.signInDate)}<b></b></p>
 </div></div>`

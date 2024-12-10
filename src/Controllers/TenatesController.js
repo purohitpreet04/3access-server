@@ -9,24 +9,19 @@ import EmailTempelates from "../Utils/EmailTempelate.js";
 import sendMail from "../Utils/email.service.js";
 import { getDocumentModule } from "../Models/DocumentModel.js";
 import { EmailLog } from "../DB/Schema/EmailLogSchema.js";
+import logUserAction from "./ActivityController.js";
 
 
 
 export const AddTenants = async (req, res) => {
-
     try {
         const { _id, property, room, ...data } = req.body;
-        
-        
-        if (!property) {
-            return res.status(400).json({ success: false, message: 'Property ID is required' });
-        }
+
+
         let rentproperty = await Property.findById(property).lean();
-        
-        if (!data.firstName || !data.lastName) {
-            return res.status(400).json({ success: false, message: 'First name and last name are required for the tenant' });
-        }
-        
+
+
+
         let tenant;
         // console.log(tenant)
         if (_id) {
@@ -34,13 +29,28 @@ export const AddTenants = async (req, res) => {
             if (!tenant) {
                 return res.status(404).json({ success: false, message: 'Tenant not found to update' });
             } else {
+                await logUserAction(data?.addedBy, 'EDIT', {
+                    fname: data?.firstName,
+                    lname: data?.lastName,
+                    room: room,
+                    councilTaxPayer: rentproperty.councilTaxPayer,
+                    address: rentproperty?.address,
+                    area: rentproperty?.area,
+                    city: rentproperty?.city,
+                    postCode: rentproperty?.postCode
+                }, 'Tenant', _id, req.query.addedByModel);
                 return res.status(200).json({ success: true, message: 'Tenant updated' });
             }
         } else {
-            
+
             // Function to generate mail options dynamically
 
-
+            if (!property) {
+                return res.status(400).json({ success: false, message: 'Property ID is required' });
+            }
+            if (!data.firstName || !data.lastName) {
+                return res.status(400).json({ success: false, message: 'First name and last name are required for the tenant' });
+            }
             let checkroom = await Tenants.findOne({ isSignOut: 0, room: room, property })
             if (checkroom) {
                 // console.log(checkroom)
@@ -89,9 +99,8 @@ export const AddTenants = async (req, res) => {
 
             async function sendEmails(mailOptionsArray, property) {
                 const emailPromises = mailOptionsArray.map(async (option) => {
-                    // console.log(option.html)
                     try {
-                        await sendMail(option); // Send email
+                        await sendMail(option).then((res) => console.log(res)).catch((err) => console.log(err)); 
                         const log = new EmailLog({
                             userId: data?.addedBy,
                             subject: option?.subject,
@@ -112,7 +121,23 @@ export const AddTenants = async (req, res) => {
             }
             tenant = new Tenants({ ...data, property, room });
             const newTenant = await tenant.save();
-            const userData = await user.findById(data?.addedBy).lean()
+            await logUserAction(data?.addedBy, 'ADD', {
+                fname: data?.firstName,
+                lname: data?.lastName,
+                room: room,
+                councilTaxPayer: rentproperty.councilTaxPayer,
+                address: rentproperty?.address,
+                area: rentproperty?.area,
+                city: rentproperty?.city,
+                postCode: rentproperty?.postCode
+            }, 'Tenant', newTenant?._id, req.query.addedByModel);
+            let userData
+            if (['company-agent', 'staff'].includes(data?.addedByRole)) {
+                let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' })
+                userData = staffdata?.addedBy
+            } else {
+                userData = await user.findById(data?.addedBy).lean()
+            }
             const mailsArray = [{ subject: '', emailType: 'new_tanant', filename: 'license_to_occupy' }]
             for (const mail of mailsArray) {
                 await ProcessTenant(userData, newTenant, mail?.filename, mail?.emailType)
@@ -184,7 +209,7 @@ export const AddTenants = async (req, res) => {
                     },
                 ]
             );
-            
+
             res.status(200).json({
                 success: true,
                 // data: tenant,
@@ -203,7 +228,7 @@ export const AddTenants = async (req, res) => {
             message: 'Failed to add or update tenant',
             error: error.message || 'Internal server error',
         });
-        
+
     }
 };
 
@@ -394,13 +419,13 @@ export const signOutTenants = async (req, res) => {
         const updatedProperty = await Property.findByIdAndUpdate(
             propertyObjectId,
             {
-                $pull: { tenants: { tenant_id: tenantId } } 
-            }
+                $pull: { tenants: { tenant_id: tenantId } }
+            }, { new: true }
         );
         await Property.findByIdAndUpdate(
             propertyObjectId,
             {
-                $push: { tenants: { roomNo: parseInt(tenant?.room), lastsignoutdate: date.toISOString() } } 
+                $push: { tenants: { roomNo: parseInt(tenant?.room), lastsignoutdate: date.toISOString() } }
             }
         );
 
@@ -410,8 +435,15 @@ export const signOutTenants = async (req, res) => {
                 message: 'Property not found or tenant not associated with the property!',
             });
         }
-
-        // Step 3 (Optional): If you need to log or record the sign-out date, handle it in a separate collection or log
+        const userId = req.headers['user']
+        await logUserAction(userId, 'DELETE', {
+            councilTaxPayer: updatedProperty.councilTaxPayer,
+            address: updatedProperty?.address,
+            area: updatedProperty?.area,
+            city: updatedProperty?.city,
+            postCode: updatedProperty?.postCode,
+            room: tenant?.room
+        }, 'Tenant', _id, req.query.addedByModel);
         return res.status(200).json({
             success: true,
             message: 'Tenant successfully signed out and removed from property.',
@@ -419,7 +451,7 @@ export const signOutTenants = async (req, res) => {
             updatedProperty,
         });
     } catch (error) {
-        
+
         return res.status(500).json({
             success: false,
             message: 'Failed to sign out tenant',
@@ -506,7 +538,7 @@ export const getTenantDetails = async (req, res) => {
                     tenantEmail: 1,
                     isSignOut: 1,
                     room: 1,
-                    status:1,
+                    status: 1,
                     signInDate: 1,
                     rslDetails: {
                         rslname: '$companyDetails.companyname',
@@ -515,6 +547,7 @@ export const getTenantDetails = async (req, res) => {
                         city: '$companyDetails.city',
                     },
                     propertyDetails: {
+                        _id: '$propertyDetails._id',
                         address: '$propertyDetails.address',
                         city: '$propertyDetails.city',
                         area: '$propertyDetails.area',

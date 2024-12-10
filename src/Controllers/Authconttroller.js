@@ -36,8 +36,8 @@ export const login = async (req, res) => {
         }
 
         const responseData = {
-            success: true,
             token: generateToken(User._id),
+            success: true,
             user: {
                 address: User.address,
                 fname: User.fname,
@@ -143,7 +143,7 @@ export const registerUser = async (req, res) => {
             severity: 'success', success: true
         });
     } catch (error) {
-        // console.log(error)
+        console.log(error)
         res.status(500).json({ error: 'Internal server error', severity: 'error', success: false });
     }
 }

@@ -53,16 +53,16 @@ const userSchema = new mongoose.Schema({
     pincode: {
         type: String,
         required: true,
-        match: /^\d{6}$/,
+        // match: /^\d{6}$/,
     },
     phonenumber: {
         type: String,
         required: true,
-        match: /^\d{10}$/,
+        // match: /^\d{10}$/,
     },
     website: {
         type: String,
-        match: /^(https?:\/\/)?([\w\-])+(\.[\w\-]+)+[/#?]?.*$/,
+        // match: /^(https?:\/\/)?([\w\-])+(\.[\w\-]+)+[/#?]?.*$/,
     },
     role: {
         type: String,
