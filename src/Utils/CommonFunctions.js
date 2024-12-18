@@ -2,12 +2,15 @@ import jwt from 'jsonwebtoken'
 import { config } from 'dotenv';
 import moment from 'moment';
 import path from 'path';
-import puppeteer from 'puppeteer';
+// import puppeteer from 'puppeteer';
+import { tenatsignImageArray } from '../../test.js';
+import { getPreSignedUrl } from './s3Config.js';
+import axios from 'axios';
 
 config()
 
-export const HandleError = (req, res, error, status = 500) => {
-  res.status(status).send({ message: "internal server Error...", success: false, severity: 'error' })
+export const HandleError = (req, res, error = {}, status = 500, message) => {
+  res.status(status).send({ message: message || "internal server Error...", success: false, severity: 'error' })
 }
 
 export const generateToken = (id) => {
@@ -26,26 +29,195 @@ export const getDate = (date, format = "DD-MM-YYYY") => {
 
 
 export const generateAttachments = (filePath) => {
-    return {
-      filename: path.basename(filePath), // Extracts the file name
-      path: path.join(process.env.__dirname, filePath), // Creates an absolute path
-    };
+  return {
+    filename: path.basename(filePath), // Extracts the file name
+    path: path.join(process.env.__dirname, filePath), // Creates an absolute path
+  };
 };
 
 
 export const generatePdfFromHtml = async (htmlContent) => {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
 
-  // Set the HTML content
-  await page.setContent(htmlContent);
 
-  // Generate PDF in memory
-  const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-  });
+  return false
+  // const browser = await puppeteer.launch();
+  // const page = await browser.newPage();
 
-  await browser.close();
-  return pdfBuffer;
+  // // Set the HTML content
+  // await page.setContent(htmlContent);
+
+  // // Generate PDF in memory
+  // const pdfBuffer = await page.pdf({
+  //   format: 'A4',
+  //   printBackground: true,
+  // });
+
+  // await browser.close();
+  // return pdfBuffer;
 };
+
+// export function replacePlaceholders(template, data) {
+
+//   return template.replace(/{{(.*?)}}/g, async (_, key) => {
+//     if (tenatsignImageArray.includes(key)) {
+//       return key.trim() in data ? `<img src="${data[key.trim()]}" alt="Logo" style="height: 40px;"></img>` : `{{${key}}}`;
+//     }
+//     return key.trim() in data ? data[key.trim()] : `{{${key}}}`;
+//   });
+// }
+
+
+// export async function replacePlaceholders(template, data) {
+//   // Match all placeholders
+//   const matches = template.match(/{{(.*?)}}/g);
+
+//   if (!matches) return template;
+//   // console.log(matches);
+
+//   const replacements = await Promise.all(
+//     matches.map(async (placeholder) => {
+//       const key = placeholder.replace(/{{|}}/g, "").trim();
+//       const isImageKey = tenatsignImageArray.some(({ key: imageKey }) => imageKey === key);
+
+//       // If it's an image key, handle getPreSignedUrl
+//       if (isImageKey) {
+//         const preSignedUrl = data[key] ? await getPreSignedUrl(data[key]) : null;
+
+//         return preSignedUrl
+//           ? { placeholder, replacement: `<img src="${preSignedUrl}" alt="Logo" style="height: 100px;"></img>` }
+//           : { placeholder, replacement: '' };
+//       }
+
+//       // If not an image key, replace with data or keep placeholder
+//       return key in data
+//         ? { placeholder, replacement: data[key] }
+//         : { placeholder, replacement: placeholder };
+//     })
+//   );
+
+//   // Replace placeholders with resolved values
+//   let result = template;
+//   replacements.forEach(({ placeholder, replacement }) => {
+//     result = result.replace(placeholder, replacement);
+//   });
+
+//   return result;
+// }
+
+
+export async function replacePlaceholders(template, data) {
+  try {
+    const matches = template.match(/{{(.*?)}}/g);
+
+    if (!matches) return template;
+
+    const replacements = await Promise.all(
+      matches.map(async (placeholder) => {
+        const key = placeholder.replace(/{{|}}/g, "").trim();
+        const isImageKey = tenatsignImageArray.some(({ key: imageKey }) => imageKey === key);
+
+        if (isImageKey) {
+          const imageUrl = data[key] ? await getPreSignedUrl(data[key]) : null;
+          let base64img = ''
+          if (imageUrl && /^https?:\/\//.test(imageUrl)) {
+            try {
+              const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+              const base64Image = Buffer.from(response.data).toString('base64');
+              const fileType = response.headers['content-type'];
+              base64img = `data:${fileType};base64,${base64Image}`;
+            } catch (imageError) {
+              base64img = ''; // Fallback to empty string if image fetch fails
+            }
+
+            return {
+              placeholder,
+              replacement: `
+              <img src="${base64img}" alt="signs" style="height: 50px; width: 50px; object-fit: contain; margin-right: 10px;" />
+              `
+            };
+          }
+
+          return { placeholder, replacement: placeholder };
+        }
+
+        return key in data
+          ? { placeholder, replacement: data[key] }
+          : { placeholder, replacement: placeholder };
+      })
+    );
+
+    let result = template;
+    replacements.forEach(({ placeholder, replacement }) => {
+      result = result.replace(placeholder, replacement);
+    });
+
+    return result;
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function generateHtmlforPdf(template, data) {
+  try {
+    const matches = template.match(/{{(.*?)}}/g);
+
+    if (!matches) return template;
+
+    const replacements = await Promise.all(
+      matches.map(async (placeholder) => {
+        const key = placeholder.replace(/{{|}}/g, "").trim();
+        const isImageKey = tenatsignImageArray.some(({ key: imageKey }) => imageKey === key);
+
+        if (isImageKey) {
+          const imageUrl = data[key] ? await getPreSignedUrl(data[key]) : null;
+          let base64img = '';
+          if (imageUrl && /^https?:\/\//.test(imageUrl)) {
+            try {
+              const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+              const base64Image = Buffer.from(response.data).toString('base64');
+              const fileType = response.headers['content-type'];
+              base64img = `data:${fileType};base64,${base64Image}`;
+            } catch (imageError) {
+              base64img = ''; // Fallback to empty string if image fetch fails
+            }
+
+            return {
+              placeholder,
+              replacement: {
+                image: base64img,
+                width: 40, // Set the desired width
+                height: 20, // Set the desired height
+                alignment: 'center', // Optional: alignment of the image
+              },
+            };
+          }
+
+          return { placeholder, replacement: placeholder };
+        }
+
+        return key in data
+          ? { placeholder, replacement: data[key] }
+          : { placeholder, replacement: placeholder };
+      })
+    );
+
+
+    // Replace placeholders with pdfMake-compatible replacements
+    let result = template;
+    replacements.forEach(({ placeholder, replacement }) => {
+      // Handle replacement objects for pdfMake (like images)
+      if (typeof replacement === 'object') {
+        result = result.replace(placeholder, `
+              <img src="${replacement?.image}" alt="signs" style="height: 200px; width: 200px; object-fit: cover; margin-right: 10px;" />
+              `);
+      } else {
+        result = result.replace(placeholder, replacement);
+      }
+    });
+
+    return result; // Convert stringified objects back to JSON format
+  } catch (error) {
+    console.error('Error replacing placeholders:');
+  }
+}

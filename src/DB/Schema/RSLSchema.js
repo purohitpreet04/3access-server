@@ -2,9 +2,11 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 mongoose.set('strictPopulate', false);
-const userSchema = new mongoose.Schema({
-    staff: [mongoose.Schema.Types.ObjectId],
-    companyagent: [mongoose.Schema.Types.ObjectId],
+const rslSchema = new mongoose.Schema({
+    rslLogo: {
+        type: String,
+        default: ''
+    },
     fname: {
         type: String,
         required: true,
@@ -25,12 +27,6 @@ const userSchema = new mongoose.Schema({
         unique: true,
         match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
-    password: {
-        type: String,
-        // required: true,
-        minlength: 8,
-        maxlength: 128,
-    },
     companyname: {
         type: String,
         maxlength: 100,
@@ -42,7 +38,6 @@ const userSchema = new mongoose.Schema({
     },
     area: {
         type: String,
-        required: true,
         maxlength: 50,
     },
     city: {
@@ -68,26 +63,21 @@ const userSchema = new mongoose.Schema({
         type: String,
         require: true
     },
-    selectedData: { type: String },
-    permission: { type: Array, default: [] },
     emailto: { type: String, default: '' },
     emailcc: { type: String, default: '' },
-    isMainMA: {
-        type: Number,
-        default: 0
+    addedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
     },
-    status: {
-        type: Number,
-        default: 0
-    },
-    
+    visibleTo: [mongoose.Schema.Types.ObjectId],
+    status: { type: Number, default: 0 }
 }, {
     timestamps: true,
 });
 
-userSchema.methods.hasStaffOrAgent = function () {
+rslSchema.methods.hasStaffOrAgent = function () {
     return this.staff.length > 0 || this.companyagent.length > 0;
 };
 
-const user = mongoose.model('User', userSchema);
-export default user; 
+const RSL = mongoose.model('rsl', rslSchema);
+export default RSL;

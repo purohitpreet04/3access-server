@@ -3,6 +3,7 @@ import Property from "../DB/Schema/PropertySchema.js";
 import user from "../DB/Schema/userSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import logUserAction from "./ActivityController.js";
+import RSL from "../DB/Schema/RSLSchema.js";
 
 export const AddnewProperty = async (req, res) => {
     try {
@@ -53,6 +54,7 @@ export const AddnewProperty = async (req, res) => {
 
 export const getAllComapny = async (req, res) => {
     try {
+        const { _id } = req.query;
         const result = await user.find({ role: 'company' }, { password: 0 })
         if (result.length > 0) {
             return res.status(201).json({ data: result, success: true });
@@ -65,7 +67,7 @@ export const getAllComapny = async (req, res) => {
 }
 
 export const getAllProperty = async (req, res) => {
-    const { _id, search, page = 1, limit = 10, filterby, role, staffAddedByrole , staffAddedBy} = req.query;
+    const { _id, search, page = 1, limit = 10, filterby, role, staffAddedByrole, staffAddedBy } = req.query;
     try {
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);

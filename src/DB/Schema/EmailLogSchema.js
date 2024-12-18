@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const emailLogSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'rsl', },
     subject: { type: String,  },
     body: { type: String, },
     attachments: { type: String }, // Array of attachment paths/URLs

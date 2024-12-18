@@ -9,6 +9,10 @@ config()
 
 
 export const getPreSignedUrl = async (s3Key) => {
+
+    if (s3Key === '') {
+        return ''
+    }
     try {
         const command = new GetObjectCommand({
             Bucket: process.env.AWS_S3_BUCKET,

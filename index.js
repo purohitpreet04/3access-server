@@ -14,6 +14,7 @@ import sendMail from "./src/Utils/email.service.js";
 import path from 'path'
 import { initCronJobs } from "./src/Utils/CronJob.js";
 import { fileURLToPath } from "url";
+import rslRoutes from "./src/routes/RSLroutes.js";
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
 config()
@@ -29,6 +30,7 @@ app.use('/api/staff', staffrouter)
 app.use('/api/property', propertyroute)
 app.use('/api/tenents', tenents)
 app.use('/api/desh', deshrouter)
+app.use('/api/rsl', rslRoutes)
 
 app.post('/api/upload', verifyJWT, uploadAndProcessFiles(), (req, res) => {
     const fileUrls = req.uploadedFiles.map(file => ({

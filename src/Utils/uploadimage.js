@@ -35,11 +35,6 @@ const upload = multer({ storage: storage }).fields([
 ]);
 
 
-
-
-
-
-
 /**
  * Middleware to handle multiple image and PDF uploads to local machine.
  * @returns {Function} - Express middleware function

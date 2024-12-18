@@ -10,6 +10,7 @@ import sendMail from "../Utils/email.service.js";
 import { getDocumentModule } from "../Models/DocumentModel.js";
 import { EmailLog } from "../DB/Schema/EmailLogSchema.js";
 import logUserAction from "./ActivityController.js";
+import Template from "../DB/Schema/TemplateSchema.js";
 
 
 
@@ -100,7 +101,7 @@ export const AddTenants = async (req, res) => {
             async function sendEmails(mailOptionsArray, property) {
                 const emailPromises = mailOptionsArray.map(async (option) => {
                     try {
-                        await sendMail(option).then((res) => console.log(res)).catch((err) => console.log(err)); 
+                        await sendMail(option).then((res) => console.log(res)).catch((err) => console.log(err));
                         const log = new EmailLog({
                             userId: data?.addedBy,
                             subject: option?.subject,
@@ -517,7 +518,7 @@ export const getTenantDetails = async (req, res) => {
             { $unwind: { path: "$propertyDetails", preserveNullAndEmptyArrays: true } },
             {
                 $lookup: {
-                    from: 'users',
+                    from: 'rsls',
                     localField: 'propertyDetails.rslTypeGroup',
                     foreignField: '_id',
                     as: 'companyDetails'
@@ -541,6 +542,7 @@ export const getTenantDetails = async (req, res) => {
                     status: 1,
                     signInDate: 1,
                     rslDetails: {
+                        _id: '$companyDetails._id',
                         rslname: '$companyDetails.companyname',
                         address: '$companyDetails.address',
                         area: '$companyDetails.area',
@@ -558,6 +560,10 @@ export const getTenantDetails = async (req, res) => {
             }
         ]);
 
+        const rslDocuments = await Template.find({ rsl: new mongoose.Types.ObjectId(tenant[0].rslDetails?._id) }).select('_id name')
+        // console.log(rslDocuments)
+        
+
         if (!tenant) {
             return res.status(404).json({
                 success: false,
@@ -568,6 +574,7 @@ export const getTenantDetails = async (req, res) => {
         return res.status(200).json({
             success: true,
             data: tenant[0],
+            rslDocuments
         });
 
     } catch (error) {

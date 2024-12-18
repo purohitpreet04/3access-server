@@ -81,7 +81,7 @@ async function CheckStatus(user) {
             let innerHTML = await tdElement.getAttribute('innerHTML');
             let value = innerHTML.match(/&#xA3;\s*(\d+(\.\d+)?)/)[1];
 
-            console.log(value);
+            // console.log(value);
             res(isActive)
 
         } catch (error) {

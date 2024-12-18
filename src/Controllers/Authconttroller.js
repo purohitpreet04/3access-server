@@ -3,6 +3,7 @@ import { generateToken, HandleError } from "../Utils/CommonFunctions.js"
 import bcrypt from 'bcryptjs';
 import user from "../DB/Schema/userSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
+import RSL from "../DB/Schema/RSLSchema.js";
 
 export const login = async (req, res) => {
     try {
@@ -13,6 +14,15 @@ export const login = async (req, res) => {
         }
 
         let User = await user.findOne({ email }).lean();
+        if (['company'].includes(User?.role)) {
+            return res.status(401).send({ message: 'Access Denied', severity: 'error' });
+        }
+
+        if (['agent'].includes(User?.role) && [0].includes(User?.status) && [0].includes(User?.isMainMA)) {
+            return res.status(401).send({ message: "You don't have access anymore!", severity: 'error' });
+        }
+
+
 
         let isStaff = false;
         let addedByData = null;
@@ -20,7 +30,10 @@ export const login = async (req, res) => {
         if (!User) {
             User = await Staff.findOne({ email, status: 0 }).lean();
             isStaff = !!User;
-
+           let addedBy_user = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean()
+            if (['agent'].includes(addedBy_user?.role) && [0].includes(addedBy_user?.status) && [0].includes(addedBy_user?.isMainMA)) {
+                return response.status(401).send({ message: 'Access denied!', severity: 'error' });
+            }
             if (isStaff && User.addedBy) {
                 addedByData = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean();
             }
@@ -58,18 +71,18 @@ export const login = async (req, res) => {
         if (isStaff && addedByData) {
             responseData.user.username = User?.username
             responseData.user.addedBy = {
-                _id: addedByData._id,
-                fname: addedByData.fname,
-                lname: addedByData.lname,
-                email: addedByData.email,
-                role: addedByData.role,
-                phonenumber: addedByData.phonenumber,
+                _id: addedByData?._id,
+                fname: addedByData?.fname,
+                lname: addedByData?.lname,
+                email: addedByData?.email,
+                role: addedByData?.role,
+                phonenumber: addedByData?.phonenumber,
 
             };
         }
         res.status(200).json(responseData);
     } catch (error) {
-        // console.log(error)
+        console.log(error)
         HandleError(req, res, error)
     }
 }
@@ -120,15 +133,21 @@ export const registerUser = async (req, res) => {
             pincode,
             website,
             role,
+            status: 0
         });
 
-        // 5. Save the user to the database
         await newUser.save();
 
-        // 6. Generate JWT token for the new user
+        if (newUser?._id) {
+
+            await RSL.updateMany(
+                { status: 0 },
+                { $addToSet: { visibleTo: newUser?._id } }
+            );
+        }
+
         const token = generateToken(newUser._id);
 
-        // 7. Return success response with token and user details
         res.status(201).json({
             message: 'Registration successful',
             token,
@@ -143,29 +162,33 @@ export const registerUser = async (req, res) => {
             severity: 'success', success: true
         });
     } catch (error) {
-        console.log(error)
         res.status(500).json({ error: 'Internal server error', severity: 'error', success: false });
     }
 }
 
-export const fetchUserDetails = async (req, res) => {
-    try {
-        const userId = req.headers['user']
-        if (!isObjectIdOrHexString(userId)) {
-            return res.status(401).send({ message: 'User data is not valid', severity: 'error' });
-        }
+// export const fetchUserDetails = async (req, res) => {
+//     try {
+//         const userId = req.headers['user']
+//         if (!isObjectIdOrHexString(userId)) {
+//             return res.status(401).send({ message: 'User data is not valid', severity: 'error' });
+//         }
 
-        const User = await user.findById({ "_id": userId }, { password: 0 }).lean()
+//         const User = await user.findById({ "_id": userId }, { password: 0 }).lean()
+        
+//         if (!User) {
+//             return res.status(401).send({ message: 'User Not Found!', severity: 'error' });
+//         }
+//         console.log(User);
+        
+//         if (['agent'].includes(User?.role) && [0].includes(User?.status)) {
+//             return res.status(401).send({ message: 'Access denied!', severity: 'error' });
+//         }
+//         return res.status(200).json({
+//             success: true,
+//             user: User,
+//         });
 
-        if (!User) {
-            return res.status(401).send({ message: 'User Not Found!', severity: 'error' });
-        }
-        res.status(200).json({
-            success: true,
-            user: User,
-        });
-
-    } catch (error) {
-        HandleError(req, res, error)
-    }
-}
+//     } catch (error) {
+//         HandleError(req, res, error)
+//     }
+// }

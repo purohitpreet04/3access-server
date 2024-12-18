@@ -173,7 +173,7 @@ const assessmentSchema = new Schema({
     },
     companyid: {
         type: mongoose.Schema.Types.ObjectId,
-        refPath: 'User'
+        refPath: 'rsl'
     },
     addedByModel: {
         type: String,

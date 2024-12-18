@@ -19,7 +19,7 @@ const propertySchema = new mongoose.Schema({
     rslTypeGroup: {
         // type: String,
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'rsl'
     },
     address: {
         type: String,

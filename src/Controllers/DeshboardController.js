@@ -110,10 +110,10 @@ export const GetallProperty = async (req, res) => {
 
             return {
                 _id: property._id,
-                companyname: property.rslTypeGroup.companyname,
-                address: property.address,
+                companyname: property?.rslTypeGroup?.companyname,
+                address: property?.address,
                 ...roomObject,
-                addedBy: property.addedBy,
+                addedBy: property?.addedBy,
             }
 
         }));
