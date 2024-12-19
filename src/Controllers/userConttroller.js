@@ -245,6 +245,12 @@ export const GeneratePdfController = async (req, res) => {
                 italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
                 bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
             },
+            Arial: {
+                normal: path.join(__dirname, "font/ArialTh.ttf"),
+                bold: path.join(__dirname, "font/Roboto-Bold.ttf"),
+                italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
+                bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
+            }
         };
 
         const sanitizedHtmlContent = htmlContent.html.replace(/id="isPasted"/g, "");
@@ -265,8 +271,8 @@ export const GeneratePdfController = async (req, res) => {
                 columns: [
                     {
                         image: htmlContent.logo,
-                        width: 20,
-                        height: 20,
+                        width: 100,
+                        height: 100,
                         alignment: 'left',
                     },
                     {
@@ -535,7 +541,7 @@ export const AgentDetails = async (req, res) => {
             // Pagination
             { $skip: skip },
             { $limit: Number(limit) },
-        ]);        
+        ]);
 
         // Total count for pagination metadata
         const total = await user.countDocuments({

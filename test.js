@@ -6,7 +6,7 @@ export const rslData = [
     { key: 'rslAddress', label: 'Address' },
     { key: 'rsLArea', label: 'Area' },
     { key: 'rslCity', label: 'City' },
-    { key: 'pincode', label: 'Pincode' },
+    { key: 'rslpincode', label: 'Pincode' },
     { key: 'phonenumber', label: 'Phone Number' },
     { key: 'website', label: 'Website' },
     { key: 'role', label: 'Role' },

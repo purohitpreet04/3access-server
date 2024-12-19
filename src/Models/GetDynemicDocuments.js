@@ -17,7 +17,7 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
             populate: {
                 path: 'rslTypeGroup', // Populate 'rslTypeGroup' in 'property'
                 model: 'rsl', // Assuming 'Users' is the collection name
-                select: 'companyname address area city rslLogo', // Select specific fields
+                select: 'companyname address area city rslLogo pincode addedBy', // Select specific fields
             }
         }).populate('addedBy', 'fname lname email role username area visibleTo')
         .lean(); // Use lean to get plain JavaScript objects
@@ -78,6 +78,7 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
         rslAddress: data?.property?.rslTypeGroup?.address || '',
         rsLArea: data?.property?.rslTypeGroup?.area || '',
         rslCity: data?.property?.rslTypeGroup?.city || '',
+        rslpincode: data?.property?.rslTypeGroup?.pincode || '',
         pro_address: data?.property?.address || '',
         pro_city: data?.property?.city || '',
         pro_area: data?.property?.area || '',
@@ -106,15 +107,19 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
                 }
             }
         }
-        if(!pdf){
-        pdfTemp = await replacePlaceholders(html?.body, userdata)
-        let body = { html: pdfTemp, logo }
-        return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
-        }else{
-           let pdfhtmlTemp = await generateHtmlforPdf(html?.body, userdata)
-           return { html: pdfhtmlTemp, logo }
+        if (!pdf) {
+            pdfTemp = await replacePlaceholders(html?.body, userdata)
+            let body = { html: pdfTemp, logo }
+            return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+        } else {
+            pdfTemp = await replacePlaceholders(html?.body, userdata)
+            let body = { html: pdfTemp, logo }
+            return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+            //    let pdfhtmlTemp = await generateHtmlforPdf(html?.body, userdata)
+            //    return { html: pdfhtmlTemp, logo }
+            // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
         }
-        
+
     } catch (error) {
         console.log(error)
     }
@@ -122,22 +127,12 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
 }
 const addBorderAndSpacingToHTML = (html, logoURL) => {
     const styledContent = `
-    <div style="border: 2px solid #000; padding: 20px; margin: 20px auto; max-width: 800px; line-height: 1.6;">
-     <img src="${logoURL}" alt="Logo" style="height: 40px;"></img>
-    <div style=" height: 60px; border-top: 1px solid #ddd; text-align: left; padding: 10px;">
+    <div style="border: 2px solid #000; padding: 10px; margin: 10px auto; max-width: 800px; line-height: 1.6;">
+     <img src="${logoURL}" alt="Logo" style="height: 50px; width: 50px; object-fit: contain;"></img>
+        <div style=" height: 60px; border-top: 1px solid #ddd; text-align: left; padding: 10px;">
         </div>
             ${html}
         </div>
     `;
-
-    // If <body> exists, wrap the content inside the styled container
-    // if (html.includes('<body>')) {
-    //     return html.replace(
-    //         '<body>',
-    //         `<body>${styledContent}`
-    //     );
-    // }
-
-    // If no <body>, wrap the entire content in the styled container
     return styledContent;
 };

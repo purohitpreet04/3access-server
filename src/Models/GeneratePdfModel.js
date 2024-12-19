@@ -10,14 +10,20 @@ import { getDynemicPdf } from "./GetDynemicDocuments.js";
 export const GeneratePdf = async (type, id) => {
     try {
         const htmlContent = await getDynemicPdf(type, id, true) || '<p>No content available</p>';
-        const fonts = {
-            Roboto: {
-                normal: path.join(__dirname, "font/Roboto-Regular.ttf"),
-                bold: path.join(__dirname, "font/Roboto-Bold.ttf"),
-                italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
-                bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
-            },
-        };
+                const fonts = {
+                   Roboto: {
+                       normal: path.join(__dirname, "font/Roboto-Regular.ttf"),
+                       bold: path.join(__dirname, "font/Roboto-Bold.ttf"),
+                       italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
+                       bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
+                   },
+                   Arial: {
+                       normal: path.join(__dirname, "font/ArialTh.ttf"),
+                       bold: path.join(__dirname, "font/Roboto-Bold.ttf"),
+                       italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
+                       bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
+                   }
+               };
 
         const sanitizedHtmlContent = htmlContent.html.replace(/id="isPasted"/g, "");
         const dom = new JSDOM(sanitizedHtmlContent);

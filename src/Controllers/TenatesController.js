@@ -11,20 +11,16 @@ import { getDocumentModule } from "../Models/DocumentModel.js";
 import { EmailLog } from "../DB/Schema/EmailLogSchema.js";
 import logUserAction from "./ActivityController.js";
 import Template from "../DB/Schema/TemplateSchema.js";
+import { GeneratePdf } from "../Models/GeneratePdfModel.js";
+import RSL from "../DB/Schema/RSLSchema.js";
 
 
 
 export const AddTenants = async (req, res) => {
     try {
         const { _id, property, room, ...data } = req.body;
-
-
         let rentproperty = await Property.findById(property).lean();
-
-
-
         let tenant;
-        // console.log(tenant)
         if (_id) {
             tenant = await Tenants.findByIdAndUpdate(_id, data, { new: true, upsert: true });
             if (!tenant) {
@@ -34,7 +30,6 @@ export const AddTenants = async (req, res) => {
                     fname: data?.firstName,
                     lname: data?.lastName,
                     room: room,
-                    councilTaxPayer: rentproperty.councilTaxPayer,
                     address: rentproperty?.address,
                     area: rentproperty?.area,
                     city: rentproperty?.city,
@@ -57,11 +52,11 @@ export const AddTenants = async (req, res) => {
                 // console.log(checkroom)
                 return res.status(400).json({ success: false, message: 'This Room Already Occupied' });
             }
-            const ProcessTenant = async (userdata, newten, filename, emailType, subject) => {
+            const ProcessTenant = async (userdata, newten, filename, emailType, subject, tempId) => {
 
                 try {
-                    const htmlContent = await getDocumentModule(filename, newten?._id);
-                    const pdfBuffer = await generatePdfFromHtml(htmlContent);
+                    // const htmlContent = await getDocumentModule(filename, newten?._id);
+                    const pdfBuffer = await GeneratePdf(tempId, newten?._id);
                     const mailOptions = [];
                     const mailObj = await createMailObject(userdata, filename, emailType, pdfBuffer, '', newten, rentproperty)
 
@@ -139,7 +134,13 @@ export const AddTenants = async (req, res) => {
             } else {
                 userData = await user.findById(data?.addedBy).lean()
             }
-            const mailsArray = [{ subject: '', emailType: 'new_tanant', filename: 'license_to_occupy' }]
+
+
+            const pdfTemplets = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
+            const mailsArray = [{ subject: '', emailType: 'new_tanant', filename: '', tempId: '' }]
+            for (let template of pdfTemplets) {
+                mailsArray.push({ emailType: 'new_tanant', filename: template?.name, tempId: template?._id })
+            }
             for (const mail of mailsArray) {
                 await ProcessTenant(userData, newTenant, mail?.filename, mail?.emailType)
             }
@@ -562,7 +563,7 @@ export const getTenantDetails = async (req, res) => {
 
         const rslDocuments = await Template.find({ rsl: new mongoose.Types.ObjectId(tenant[0].rslDetails?._id) }).select('_id name')
         // console.log(rslDocuments)
-        
+
 
         if (!tenant) {
             return res.status(404).json({

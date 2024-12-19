@@ -255,9 +255,10 @@ export const getAllSuggetion = async (req, res) => {
 export const AddNewTemplate = async (req, res) => {
     try {
         const { subject, body, addedBy, rsl, _id, name } = req.body;
+        
+        
 
-
-        if (!subject || !body || !addedBy || !rsl || !name) {
+        if (!body || !addedBy || !rsl || !name) {
             return res.status(400).json({ error: 'All required fields must be provided', severity: 'error', success: false });
         }
 
@@ -278,6 +279,7 @@ export const AddNewTemplate = async (req, res) => {
         }
 
     } catch (error) {
+        
         return HandleError(req, res, error)
     }
 }
