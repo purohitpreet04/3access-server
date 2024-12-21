@@ -6,7 +6,7 @@ import path from 'path';
 import { tenatsignImageArray } from '../../test.js';
 import { getPreSignedUrl } from './s3Config.js';
 import axios from 'axios';
-
+import sanitizeHtml from 'sanitize-html';
 config()
 
 export const HandleError = (req, res, error = {}, status = 500, message) => {
@@ -221,3 +221,49 @@ export async function generateHtmlforPdf(template, data) {
     console.error('Error replacing placeholders:');
   }
 }
+
+export const sanitizeContent = (htmlContent) => {
+  // First sanitize the HTML content
+  let sanitizedContent = sanitizeHtml(htmlContent, {
+    allowedTags: [
+      'b', 'i', 'em', 'strong', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'a', 'img', 'br', 'table', 'tr', 'td', 'th', 'span', 'div'
+    ],
+    allowedAttributes: {
+      '*': ['href', 'src', 'alt', 'title', 'style'],  // Allow 'style' attribute to preserve inline styles
+      'a': ['href'],
+      'img': ['src', 'alt'],
+      'table': ['border', 'cellspacing', 'cellpadding', 'align', 'width', 'height'], // Allow all table attributes
+      'tr': ['align', 'valign'],
+      'th': ['align', 'valign', 'rowspan', 'colspan'],
+      'td': ['align', 'valign', 'rowspan', 'colspan', 'width', 'height'],
+      'p': ['*'],
+      'div': ['*'],
+      'span': ['*'],
+      'h1': ['*'], 'h2': ['*'], 'h3': ['*'], 'h4': ['*'], 'h5': ['*'], 'h6': ['*'],
+      'ul': ['*'], 'li': ['*']
+    },
+    allowedStyles: {
+      '*': {
+        // Allow common CSS properties that pdfMake can support
+        'color': [/^\#([0-9A-F]{3}){1,2}$/i],
+        'font-size': [/^\d+(px|em|%)$/],
+        'font-family': [/^([\w\s\-]+)$/],
+        'line-height': [/^\d+(px|em|%)$/],
+        'text-align': ['left', 'right', 'center', 'justify'],
+        'font-weight': ['normal', 'bold'],
+        'font-style': ['normal', 'italic'],
+        'background': [/^\#([0-9A-F]{3}){1,2}$/i],
+        "border": [/^#[0-9A-F]{3}([0-9A-F]{3})?$/i]
+
+      }
+    }
+  });
+
+  // Replace font-family style with Roboto
+  sanitizedContent = sanitizedContent
+    .replace(/font-family:[^;]+/g, 'font-family: Roboto')
+    // .replace(/<table([^>]*)style="([^"]*)"/g, '<table$1style="$2; width:100%;"') // Append width to existing style
+    .replace(/<table(?![^>]*style)/g, '<table style="width:100%;"'); // Add style if it doesn't exist
+  return htmlContent;
+};

@@ -43,37 +43,17 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
         gender: data?.gender || '',
         tenantContactNumber: data?.tenantContactNumber || '',
         tenantEmail: data?.tenantEmail || '',
+        build: data?.build || '',
         isSignOut: data?.isSignOut || false,
         room: data?.room || '',
         signInDate: getDate(data?.signInDate) || '',
-        // confidentialityWaiverForm: data?.confidentialityWaiverForm
-        //     ? await getPreSignedUrl(data?.confidentialityWaiverForm)
-        //     : null,
-        // licenseChargePayments: data?.licenseChargePayments
-        //     ? await getPreSignedUrl(data?.licenseChargePayments)
-        //     : null,
-        // licenseToOccupy: data?.licenseToOccupy
-        //     ? await getPreSignedUrl(data?.licenseToOccupy)
-        //     : null,
-        // staffSignature: data?.staffSignature
-        //     ? await getPreSignedUrl(data?.staffSignature)
-        //     : null,
-        // weeklyServiceCharge: data?.weeklyServiceCharge
-        //     ? await getPreSignedUrl(data?.weeklyServiceCharge)
-        //     : null,
-        // fireEvacuationProcedure: data?.fireEvacuationProcedure
-        //     ? await getPreSignedUrl(data?.fireEvacuationProcedure)
-        //     : null,
-        // authorizationForm: data?.authorizationForm
-        //     ? await getPreSignedUrl(data?.authorizationForm)
-        //     : null,
-        // missingPersonForm: data?.missingPersonForm
-        //     ? await getPreSignedUrl(data?.missingPersonForm)
-        //     : null,
-        // tenantSignature: data?.tenantSignature
-        //     ? await getPreSignedUrl(data?.tenantSignature)
-        //     : null,
         addedBy: data?.addedBy || null,
+        nextOfKinName: data?.nextOfKinName || '',
+        nextOfKinAddress: data?.nextOfKinAddress || '',
+        nextOfKinContactNo: data?.nextOfKinContactNo || '',
+        nextOfKinRelation: data?.nextOfKinRelation || '',
+        nextOfKinOtherContact: data?.nextOfKinOtherContact || '',
+        nextOfKinVisitDetails: data?.nextOfKinVisitDetails || '',
         rslname: data?.property?.rslTypeGroup?.companyname || '',
         rslAddress: data?.property?.rslTypeGroup?.address || '',
         rsLArea: data?.property?.rslTypeGroup?.area || '',
@@ -112,12 +92,12 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
             let body = { html: pdfTemp, logo }
             return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
         } else {
-            pdfTemp = await replacePlaceholders(html?.body, userdata)
-            let body = { html: pdfTemp, logo }
-            return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
-            //    let pdfhtmlTemp = await generateHtmlforPdf(html?.body, userdata)
-            //    return { html: pdfhtmlTemp, logo }
+            // pdfTemp = await replacePlaceholders(html?.body, userdata)
+            // let body = { html: pdfTemp, logo }
             // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+            // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+            let pdfhtmlTemp = await generateHtmlforPdf(html?.body, userdata)
+            return { html: pdfhtmlTemp, logo, name: html?.name }
         }
 
     } catch (error) {
@@ -127,7 +107,7 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
 }
 const addBorderAndSpacingToHTML = (html, logoURL) => {
     const styledContent = `
-    <div style="border: 2px solid #000; padding: 10px; margin: 10px auto; max-width: 800px; line-height: 1.6;">
+    <div style="border: 2px solid #000; padding: 10px; margin: 10px auto; max-width: 1000px; line-height: 1.6;">
      <img src="${logoURL}" alt="Logo" style="height: 50px; width: 50px; object-fit: contain;"></img>
         <div style=" height: 60px; border-top: 1px solid #ddd; text-align: left; padding: 10px;">
         </div>

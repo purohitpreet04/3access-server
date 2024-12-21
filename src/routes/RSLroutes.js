@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import verifyJWT from '../Utils/MIddelware.js';
-import { AddNewTemplate, getallRSL, getAllRslTemplates, getAllSuggetion, getRSL, getrsldetails, getTemplateDetails, RegisterNewRSL, setrslforagent } from '../Controllers/RSLcontroller.js';
+import { AddNewTemplate, DeleteRsl, getallRSL, getAllRslTemplates, getAllSuggetion, getRSL, getrsldetails, getTemplateDetails, RegisterNewRSL, setrslforagent } from '../Controllers/RSLcontroller.js';
 import { uploadAndProcessFiles } from '../Utils/uploadimage.js';
 
 const rslRoutes = Router()
@@ -15,6 +15,7 @@ rslRoutes.get('/get-rsl-details', verifyJWT, getrsldetails)
 rslRoutes.get('/getallsuggetion', verifyJWT, getAllSuggetion)
 rslRoutes.get('/getallrsltemplates', verifyJWT, getAllRslTemplates)
 rslRoutes.get('/gettemplatedetails', verifyJWT, getTemplateDetails)
+rslRoutes.get('/deletersl', verifyJWT, DeleteRsl)
 
 
 

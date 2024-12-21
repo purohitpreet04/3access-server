@@ -1,7 +1,7 @@
 import RSL from "../DB/Schema/RSLSchema.js";
 import user from "../DB/Schema/userSchema.js"
 import { getallRsl } from "../Models/rslmodal.js";
-import { HandleError } from "../Utils/CommonFunctions.js"
+import { HandleError, sanitizeContent } from "../Utils/CommonFunctions.js"
 import bcrypt from 'bcryptjs';
 import logUserAction from "./ActivityController.js";
 import mongoose from "mongoose";
@@ -67,7 +67,7 @@ export const RegisterNewRSL = async (req, res) => {
 
 
         } else {
-            if (!fname || !lname || !email || !phonenumber || !address || !city) {
+            if (!email || !phonenumber || !address || !city) {
                 return res.status(400).json({ error: 'All required fields must be provided', severity: 'error', success: false });
             }
             const existingUser = await RSL.findOne({ $or: [{ email }, { phonenumber }] });
@@ -106,6 +106,8 @@ export const RegisterNewRSL = async (req, res) => {
         }
 
     } catch (error) {
+        console.log(error);
+        
         return HandleError(req, res, error)
     }
 }
@@ -214,6 +216,21 @@ export const getRSL = async (req, res) => {
 };
 
 
+export const DeleteRsl = async (req, res) => {
+    try {
+        const { _id, addedByModel } = req.query;
+        const rsl = await RSL.findByIdAndUpdate(_id, { status: 1 })
+        if (!rsl) {
+            return res.status(404).json({ message: 'Property not found' });
+        }
+        const userId = req.headers['user']
+        await logUserAction(userId, 'DELETE', {}, 'RSL', _id, addedByModel);
+        res.status(200).json({ message: 'Property deleted successfully', success: true });
+    } catch (error) {
+        return HandleError(req, res, error);
+    }
+}
+
 
 export const getrsldetails = async (req, res) => {
     try {
@@ -255,31 +272,31 @@ export const getAllSuggetion = async (req, res) => {
 export const AddNewTemplate = async (req, res) => {
     try {
         const { subject, body, addedBy, rsl, _id, name } = req.body;
-        
-        
+
+
 
         if (!body || !addedBy || !rsl || !name) {
             return res.status(400).json({ error: 'All required fields must be provided', severity: 'error', success: false });
         }
+        const senitizedHtml = sanitizeContent(body)
+
 
         if (_id) {
             const updateTemp = await Template.findByIdAndUpdate(_id, {
-                subject, body, addedBy, rsl, name
+                subject, body: senitizedHtml, addedBy, rsl, name
             }, { upsert: true });
             if (!updateTemp) {
                 return res.status(200).json({ message: 'Template not found!', severity: 'error', success: false });
             } else {
-
                 return res.status(200).json({ message: 'Your Template has been updated Successfully', severity: 'success', success: true });
             }
         } else {
-            const newTemplate = new Template({ subject, body, addedBy, rsl, name })
+            const newTemplate = new Template({ subject, body: senitizedHtml, addedBy, rsl, name })
             await newTemplate.save()
             return res.status(200).json({ message: `Your new Template ${name} has been saved Successfully`, severity: 'success', success: true });
         }
 
     } catch (error) {
-        
         return HandleError(req, res, error)
     }
 }

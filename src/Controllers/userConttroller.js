@@ -2,17 +2,13 @@ import mongoose from "mongoose";
 import { EmailLog } from "../DB/Schema/EmailLogSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import user from "../DB/Schema/userSchema.js";
-import { GeneratePdf } from "../Models/GeneratePdfModel.js";
-import path from 'path'
 import { __dirname } from "../../index.js";
 import { HandleError } from "../Utils/CommonFunctions.js";
 import RSL from "../DB/Schema/RSLSchema.js";
-import pdfMake from "pdfmake";
-import { getPreSignedUrl } from "../Utils/s3Config.js";
 import { getDynemicPdf } from "../Models/GetDynemicDocuments.js";
-import htmlToPdfmake from "html-to-pdfmake";
-import { JSDOM } from "jsdom";
-import axios from "axios";
+import puppeteer from "puppeteer";
+import { GeneratePdf } from "../Models/GeneratePdfModel.js";
+
 
 export const AddCompanies = async (req, res) => {
     try {
@@ -237,88 +233,13 @@ export const GeneratePdfController = async (req, res) => {
 
     try {
         const { type, id } = req.query;
-        const htmlContent = await getDynemicPdf(type, id, true) || '<p>No content available</p>';
-        const fonts = {
-            Roboto: {
-                normal: path.join(__dirname, "font/Roboto-Regular.ttf"),
-                bold: path.join(__dirname, "font/Roboto-Bold.ttf"),
-                italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
-                bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
-            },
-            Arial: {
-                normal: path.join(__dirname, "font/ArialTh.ttf"),
-                bold: path.join(__dirname, "font/Roboto-Bold.ttf"),
-                italics: path.join(__dirname, "font/Roboto-Italic.ttf"),
-                bolditalics: path.join(__dirname, "font/Roboto-BoldItalic.ttf"),
-            }
-        };
+        let pdfBuffer = await GeneratePdf(type, id)
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.setHeader('Content-Disposition', 'attachment; filename=document.pdf');
+        res.end(pdfBuffer);
 
-        const sanitizedHtmlContent = htmlContent.html.replace(/id="isPasted"/g, "");
-        const dom = new JSDOM(sanitizedHtmlContent);
-        const pdfContent = htmlToPdfmake(dom.window.document.body.innerHTML, { window: dom.window });
-        const printer = new pdfMake(fonts);
-        const docDefinition = {
-            // content: htmlContent.html,
-            content: pdfContent,
-            styles: {
-                body: {
-                    fontSize: 12,
-                    margin: [10, 10, 10, 10],
-                },
-            },
-            pageMargins: [20, 30, 20, 30], // Define page margins
-            header: async (currentPage, pageCount) => ({
-                columns: [
-                    {
-                        image: htmlContent.logo,
-                        width: 100,
-                        height: 100,
-                        alignment: 'left',
-                    },
-                    {
-                        text: `Page ${currentPage} of ${pageCount}`,
-                        alignment: 'right',
-                        margin: [0, 20, 20, 0],
-                        fontSize: 8,
-                    },
-                ],
-                margin: [20, 10],
-            }),
-            footer: (currentPage) => ({
-                text: `Generated on: ${new Date().toLocaleDateString()}`,
-                alignment: 'center',
-                fontSize: 8,
-                margin: [0, 10],
-            }),
-            pageSize: 'A4',
-            pageMargins: [50, 50, 50, 50], // Add extra margin for border
-            background: () => ({
-                canvas: [
-                    {
-                        type: 'rect', // Draw border
-                        x: 10,
-                        y: 10,
-                        w: 575,
-                        h: 822, // Adjust for A4 size
-                        lineWidth: 1,
-                    },
-                ],
-            }),
-        };
-
-
-        const pdfDoc = printer.createPdfKitDocument(docDefinition);
-
-        const chunks = [];
-        pdfDoc.on('data', (chunk) => chunks.push(chunk));
-        pdfDoc.on('end', () => {
-            const pdfBuffer = Buffer.concat(chunks);
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'inline; filename=document.pdf');
-            res.send(pdfBuffer);
-        });
-
-        pdfDoc.end();
+        return
 
     } catch (error) {
         console.log('jnknjbhjbhb', error)
