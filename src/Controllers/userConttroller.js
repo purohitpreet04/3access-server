@@ -237,12 +237,12 @@ export const GeneratePdfController = async (req, res) => {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Length', pdfBuffer.length);
         res.setHeader('Content-Disposition', 'attachment; filename=document.pdf');
-        res.end(pdfBuffer);
-
-        return
+        
+        return res.end(pdfBuffer);
+        
 
     } catch (error) {
-        console.log('jnknjbhjbhb', error)
+        
         res.status(500).json({
             success: false,
             message: 'Failed to generate pdf',

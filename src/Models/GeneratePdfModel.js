@@ -37,7 +37,7 @@ export const GeneratePdf = async (type, id) => {
                 },
                 displayHeaderFooter: true,
                 headerTemplate: `
-                    <div style="text-align: left; width: 100%; padding-left: 20px;">
+                    <div style="text-align: left; padding-left: 20px; position:reletive, right:20px, top:10px">
                         <img src="${htmlContent?.logo}" style="width: 100px; height: 100px;" />
                     </div>
                 `,
