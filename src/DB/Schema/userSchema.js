@@ -85,14 +85,15 @@ const userSchema = new mongoose.Schema({
         default: undefined
     },
     verificationTokenExpires: { type: Date, default: undefined },
-    verificationToken: { type: String, default: undefined},
+    verificationToken: { type: String, default: undefined },
     coruspondingEmail: {
         type: String,
         required: true,
         unique: true,
         match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    }
-
+    },
+    emailto: { type: String, default: '' },
+    emailcc: { type: String, default: '' },
 }, {
     timestamps: true,
 });

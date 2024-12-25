@@ -25,7 +25,7 @@ const EmailTempelates = (type, user) => {
         <td><strong>National Insurance Number:</strong> ${user?.nationalInsuranceNumber}</td>
     </tr>
     <tr>
-        <td><strong>Move-In Date:</strong> ${getDate(user?.dateOfBirth)}</td>
+        <td><strong>Move-In Date:</strong> ${getDate(user?.signInDate)}</td>
     </tr>
     <tr>
         <td>Regards,</td>

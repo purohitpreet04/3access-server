@@ -92,7 +92,7 @@ export const AddEmail = async (req, res) => {
         const { emailto, emailcc, _id, role } = req.body;
 
         // Find the user by ID
-        const User = await RSL.findById(_id);
+        const User = await user.findById(_id);
 
         // console.log(User)
         // Check if the user exists
@@ -159,7 +159,7 @@ export const getEmails = async (req, res) => {
         if (role !== 'agent') {
             return res.status(403).json({
                 success: false,
-                message: 'You do not have access to update emails for this user',
+                message: 'You do not have access to update emails',
             });
         }
 
@@ -295,7 +295,9 @@ export const fetchUserDetails = async (req, response) => {
                     _id: User._id,
                     companyname: User?.companyname,
                     isMainMA: User?.isMainMA,
-                    status: User?.status
+                    status: User?.status,
+                    emailto: User?.emailto,
+                    emailcc: User?.emailcc,
                 },
             }
         }

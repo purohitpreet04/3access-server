@@ -115,8 +115,10 @@ export const registerUser = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const verificationToken = generateVerificationToken();
-        const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         const newUser = new user({
+            emailcc:'',
+            emailto:coruspondingEmail,
             coruspondingEmail,
             fname,
             lname,

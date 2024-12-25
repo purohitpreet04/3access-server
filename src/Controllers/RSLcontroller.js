@@ -14,7 +14,6 @@ export const RegisterNewRSL = async (req, res) => {
 
     try {
         const {
-
             addedBy,
             _id,
             fname,

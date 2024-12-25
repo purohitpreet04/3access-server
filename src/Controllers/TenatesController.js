@@ -127,12 +127,12 @@ export const AddTenants = async (req, res) => {
                 postCode: rentproperty?.postCode
             }, 'Tenant', newTenant?._id, req.query.addedByModel);
             let userData = {}
-            let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city emailto emailcc').lean()
+            let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city').lean()
             if (['company-agent', 'staff'].includes(data?.addedByRole)) {
                 let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' })
                 userData = { ...staffdata?.addedBy, ...rslData }
             } else {
-                let agentData = await user.findById(data?.addedBy).lean()
+                let agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean()
                 userData = { ...agentData, ...rslData }
             }
 
