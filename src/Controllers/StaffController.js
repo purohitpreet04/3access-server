@@ -258,58 +258,75 @@ export const GetManegingAgentandcompany = async (req, res) => {
 // ... existing code ...
 
 export const DeleteStaff = async (req, res) => {
-    const { staffId } = req.query;
+    const { staffId, granted } = req.query;
+
 
     try {
-        // Check if staffId is valid MongoDB ObjectId
-        if (!mongoose.Types.ObjectId.isValid(staffId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid staff ID format',
-                severity: 'error'
-            });
-        }
-
-        // Find staff member and update status to 1 (soft delete)
-        const deletedStaff = await Staff.findByIdAndUpdate(
-            staffId,
-            { status: 1 },
-            { new: true }
+        const visible_Pro = await Property.find(
+            { visibleTo: { $in: staffId } },
         );
-
-        if (!deletedStaff) {
-            return res.status(404).json({
-                success: false,
-                message: 'Staff member not found',
-                severity: 'error'
-            });
-        }
-
-        // Remove staff reference from user's companyagent/staff array
-        await user.updateMany(
-            { _id: deletedStaff?.addedBy },
-            {
-                $pull: {
-                    companyagent: staffId,
-                    staff: staffId
-                }
+        if (granted == 0) {
+            if (visible_Pro?.length != 0) {
+                return res.status(200).json({
+                    success: false,
+                    property: visible_Pro.length,
+                    severity: 'error'
+                });
             }
-        );
-        const userId = req.headers['user']
-        // Remove staff's visibility from properties
-        await Property.updateMany(
-            { visibleTo: staffId },
-            { $pull: { visibleTo: staffId } }
-        );
-        await logUserAction(userId, 'DELETE', {
-            username: deletedStaff?.username, fname: deletedStaff?.fname,
-            lname: deletedStaff?.lname,
-        }, 'Staff', deletedStaff._id, req.query.addedByModel);
-        return res.status(200).json({
-            success: true,
-            message: 'Staff member deleted successfully',
-            severity: 'success'
-        });
+        }
+
+        if (granted == 1) {
+            if (!mongoose.Types.ObjectId.isValid(staffId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid staff ID format',
+                    severity: 'error'
+                });
+            }
+
+
+            const deletedStaff = await Staff.findByIdAndUpdate(
+                staffId,
+                { status: 1 },
+                { new: true }
+            );
+
+            if (!deletedStaff) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Staff member not found',
+                    severity: 'error'
+                });
+            }
+
+            await user.updateMany(
+                { _id: deletedStaff?.addedBy },
+                {
+                    $pull: {
+                        companyagent: staffId,
+                        staff: staffId
+                    }
+                }
+            );
+            const userId = req.headers['user']
+            // Remove staff's visibility from properties
+            await Property.updateMany(
+                { visibleTo: staffId },
+                { $pull: { visibleTo: staffId } }
+            );
+            await logUserAction(userId, 'DELETE', {
+                username: deletedStaff?.username, fname: deletedStaff?.fname,
+                lname: deletedStaff?.lname,
+            }, 'Staff', deletedStaff._id, req.query.addedByModel);
+            return res.status(200).json({
+                success: true,
+                message: 'Staff member deleted successfully',
+                severity: 'success'
+            });
+
+        }
+        // return res.send(200)
+
 
     } catch (error) {
         return res.status(500).json({

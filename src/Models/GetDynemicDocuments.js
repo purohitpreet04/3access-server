@@ -12,15 +12,15 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
 
     const data = await Tenants.findById(id)
         .populate({
-            path: 'property', // Populate 'property' field
-            select: 'address city area eligibleRent postCode rslTypeGroup serviceCharges', // Select specific fields
+            path: 'property',
+            select: 'address city area eligibleRent postCode rslTypeGroup serviceCharges',
             populate: {
-                path: 'rslTypeGroup', // Populate 'rslTypeGroup' in 'property'
-                model: 'rsl', // Assuming 'Users' is the collection name
-                select: 'companyname address area city rslLogo pincode addedBy', // Select specific fields
+                path: 'rslTypeGroup',
+                model: 'rsl',
+                select: 'companyname address area city rslLogo pincode addedBy',
             }
         }).populate('addedBy', 'fname lname email role username area visibleTo')
-        .lean(); // Use lean to get plain JavaScript objects
+        .lean();
 
     userdata = {
         other_charges_of_tenant: data?.other_charges_of_tenant || '',
@@ -43,13 +43,13 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
         gender: data?.gender || '',
         tenantContactNumber: data?.tenantContactNumber || '',
         tenantEmail: data?.tenantEmail || '',
-        build: data?.build || '', 
+        build: data?.build || '',
         isSignOut: data?.isSignOut || false,
         room: data?.room || '',
         signInDate: getDate(data?.signInDate) || '',
         addedBy: data?.addedBy || null,
-        vehiclesdetails:data?.vehiclesdetails,
-        distinguishingMarks:data?.distinguishingMarks,
+        vehiclesdetails: data?.vehiclesdetails,
+        distinguishingMarks: data?.distinguishingMarks,
         nextOfKinName: data?.nextOfKinName || '',
         nextOfKinAddress: data?.nextOfKinAddress || '',
         nextOfKinContactNo: data?.nextOfKinContactNo || '',
@@ -72,6 +72,9 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
     try {
         for (let { key } of tenatsignImageArray) {
             userdata[key] = data[key]
+        }
+        if(data[html?.key]){
+            userdata['tenantSignature'] = data[html?.key]
         }
         let logo
         if (data?.property?.rslTypeGroup?.rslLogo !== '') {
@@ -103,7 +106,7 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
         }
 
     } catch (error) {
-        console.log(error)
+        console.log('error in getDynemicPdf')
     }
 
 }

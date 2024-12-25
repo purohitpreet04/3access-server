@@ -3,7 +3,6 @@ import { config } from 'dotenv';
 config()
 
 /**
- * Sends an email using Nodemailer.
  * @param {Object} options - Mail options.
  * @param {string} options.from - Sender email address.
  * @param {string} options.to - Recipient email address.
@@ -16,6 +15,7 @@ config()
  * @param {string} options.bcc - BCC recipients (optional).
  * @returns {Promise} - Resolves if the email is sent successfully, rejects otherwise.
  */
+
 const sendMail = async ({ from, to, subject, text, html, attachments = [], cc, replyTo, bcc }) => {
   // Validate required fields
   if (!subject) {
@@ -25,17 +25,15 @@ const sendMail = async ({ from, to, subject, text, html, attachments = [], cc, r
 
   try {
     // Validate email formats (basic validation)
-    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    // const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
 
-    if (!emailRegex.test(from)) {
-      console.error('Invalid sender email format');
-      return { success: false, message: 'Invalid sender email format' };
-    }
+    // if (!emailRegex.test(from)) {
+    //   return { success: false, message: 'Invalid sender email format' };
+    // }
 
-    if (!emailRegex.test(to)) {
-      console.error('Invalid recipient email format');
-      return { success: false, message: 'Invalid recipient email format' };
-    }
+    // if (!emailRegex.test(to)) {
+    //   return { success: false, message: 'Invalid recipient email format' };
+    // }
 
     // Create transporter
     const transporter = nodemailer.createTransport({

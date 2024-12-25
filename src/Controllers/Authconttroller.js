@@ -1,9 +1,10 @@
 import mongoose, { isObjectIdOrHexString } from "mongoose";
-import { generateToken, HandleError } from "../Utils/CommonFunctions.js"
+import { generateOTP, generateToken, generateVerificationToken, HandleError } from "../Utils/CommonFunctions.js"
 import bcrypt from 'bcryptjs';
 import user from "../DB/Schema/userSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import RSL from "../DB/Schema/RSLSchema.js";
+import sendMail from "../Utils/email.service.js";
 
 export const login = async (req, res) => {
     try {
@@ -19,10 +20,8 @@ export const login = async (req, res) => {
         }
 
         if (['agent'].includes(User?.role) && [0].includes(User?.status) && [0].includes(User?.isMainMA)) {
-            return res.status(401).send({ message: "You don't have access anymore!", severity: 'error' });
+            return res.status(401).send({ message: "You don't have access!", severity: 'error' });
         }
-
-
 
         let isStaff = false;
         let addedByData = null;
@@ -77,13 +76,12 @@ export const login = async (req, res) => {
                 email: addedByData?.email,
                 role: addedByData?.role,
                 phonenumber: addedByData?.phonenumber,
-
+                coruspondingEmail:addedByData?.coruspondingEmail
             };
         }
-        res.status(200).json(responseData);
+        return res.status(200).json(responseData);
     } catch (error) {
-        console.log(error)
-        HandleError(req, res, error)
+       return HandleError(req, res, error)
     }
 }
 
@@ -91,6 +89,7 @@ export const login = async (req, res) => {
 export const registerUser = async (req, res) => {
     try {
         const {
+            coruspondingEmail,
             fname,
             lname,
             email,
@@ -105,22 +104,20 @@ export const registerUser = async (req, res) => {
             role
         } = req.body;
 
-        // 1. Validate required fields
         if (!fname || !lname || !email || !password || !phonenumber || !address || !city) {
             return res.status(400).json({ error: 'All required fields must be provided', severity: 'error', success: false });
         }
 
-        // 2. Check if the user already exists
         const existingUser = await user.findOne({ email });
         if (existingUser) {
             return res.status(409).json({ error: 'User already exists with this email', severity: 'error', success: false, page: 1 });
         }
 
-        // 3. Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // 4. Create the new user
+        const verificationToken = generateVerificationToken();
+        const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         const newUser = new user({
+            coruspondingEmail,
             fname,
             lname,
             email,
@@ -133,38 +130,164 @@ export const registerUser = async (req, res) => {
             pincode,
             website,
             role,
+            verificationToken,
+            verificationTokenExpires,
             status: 0
         });
 
         await newUser.save();
 
         if (newUser?._id) {
-
             await RSL.updateMany(
                 { status: 0 },
                 { $addToSet: { visibleTo: newUser?._id } }
             );
         }
+        const verificationLink = `${process.env.FRONTEND_URL}auth/verify-user/${newUser?._id}/${verificationToken}`;
+       let isSended = await sendMail({
+            from:process.env.SMTP_USER,
+            to:coruspondingEmail, 
+            subject: 'Email for Verification',
+            html: `
+                 <!DOCTYPE html>
+                  <html>
+                   <head>
+                  <style>
+        .email-container {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            background-color: #4a90e2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #4a90e2;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Welcome to Our Platform!</h1>
+        </div>
+        <div class="content">
+            <p>Hello ${fname},</p>
+            <p>Thank you for joining us! Please click the button below to verify your email address:</p>
+            <div style="text-align: center;">
+                <a href="${verificationLink}" class="button">Verify Email Address</a>
+            </div>
+            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+            <p style="word-break: break-all;">${verificationLink}</p>
+            <p>This link will expire in 24 hours for security purposes.</p>
+            <p>If you didn't create an account, please ignore this email.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>`
+        })
 
-        const token = generateToken(newUser._id);
+        if(isSended?.success === true){
+            return res.send({message:'Verification link sended To your Email', success:true})
+        }else{
+            return res.send({message:'Error While Sending Email', success:true})
+        }
 
-        res.status(201).json({
-            message: 'Registration successful',
-            token,
-            user: {
-                _id: newUser._id,
-                fname: newUser.fname,
-                lname: newUser.lname,
-                email: newUser.email,
-                companyname: newUser.companyname,
-                role: newUser.role,
-            },
-            severity: 'success', success: true
-        });
+
     } catch (error) {
         res.status(500).json({ error: 'Internal server error', severity: 'error', success: false });
     }
 }
+
+
+export const VerifyByLink = async (req, res) =>{
+    try {
+        const {token, _id} = req.query;
+        
+
+        
+        const User = await user.findOne({
+           
+            $or:[
+                { _id },
+                {verificationToken: token, verificationTokenExpires: { $gt: new Date() }},
+            ]
+            
+            
+        });
+
+        
+        if(User?.status === 1){
+           return res.send({
+                isVerified:true,
+                message: "Account has been verified.",
+                severity:'success'
+            });
+        }
+
+
+        if(!['agent'].includes(User?.role)){
+           return res.send({
+                isVerified:false,
+                message: "Don't have access"
+            });
+        }
+
+        if (!User) {
+            return res.send({
+                isVerified:false,
+                message: 'Invalid or expired verification token'
+            });
+        }
+
+        User.status = 1;
+        User.verificationToken = undefined;
+        User.verificationTokenExpires = undefined;
+        await User.save();
+
+        res.json({
+            isVerified:true,
+            message: 'Email verified successfully. You can now log in.'
+        });
+        
+
+    } catch (error) {
+        console.log(error);
+        return HandleError(req, res, error)
+    }
+}
+
+
+
+
 
 // export const fetchUserDetails = async (req, res) => {
 //     try {

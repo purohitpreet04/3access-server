@@ -52,11 +52,12 @@ export const AddTenants = async (req, res) => {
                 // console.log(checkroom)
                 return res.status(400).json({ success: false, message: 'This Room Already Occupied' });
             }
-            const ProcessTenant = async (userdata, newten, filename, emailType, subject, tempId) => {
+            const ProcessTenant = async (userdata, newten, filename, emailType, tempId) => {
 
                 try {
                     // const htmlContent = await getDocumentModule(filename, newten?._id);
                     const pdfBuffer = await GeneratePdf(tempId, newten?._id);
+                    
                     const mailOptions = [];
                     const mailObj = await createMailObject(userdata, filename, emailType, pdfBuffer, '', newten, rentproperty)
 
@@ -72,8 +73,6 @@ export const AddTenants = async (req, res) => {
 
 
             const createMailObject = async (user, filename, emailType, pdfBuffer, subject, newten, propertyData) => {
-                // const emailtem = EmailTempelates(emailType, { _id, property, room, ...data })
-                // console.log('email', emailtem)
                 return {
                     replyTo: user?.emailto,
                     // from: `${userData?.fname} ${userData?.lname} `,
@@ -96,23 +95,23 @@ export const AddTenants = async (req, res) => {
             async function sendEmails(mailOptionsArray, property) {
                 const emailPromises = mailOptionsArray.map(async (option) => {
                     try {
-                        await sendMail(option).then((res) => console.log(res)).catch((err) => console.log(err));
-                        const log = new EmailLog({
-                            userId: data?.addedBy,
-                            subject: option?.subject,
-                            body: option?.html, // Directly use HTML string
-                            attachments: option?.attachments[0].filename, // Handle multiple attachments
-                            emailTo: option?.to,
-                            emailCC: option?.bcc,
-                        });
-                        await log.save();
+                        await sendMail(option).then(async (res) => {
+                            const log = new EmailLog({
+                                userId: data?.addedBy,
+                                subject: option?.subject,
+                                body: option?.html,
+                                attachments: option?.attachments[0].filename,
+                                emailTo: option?.to,
+                                emailCC: option?.bcc,
+                            });
+                            await log.save();
+                        }).catch((err) => console.log(err));
+                       
                     } catch (error) {
                         console.error(`Failed to send email to ${option.to}: ${error.message}`);
-                        // throw error; // Optionally rethrow the error if needed
                     }
                 });
 
-                // Wait for all emails to be processed
                 await Promise.all(emailPromises);
             }
             tenant = new Tenants({ ...data, property, room });
@@ -127,22 +126,24 @@ export const AddTenants = async (req, res) => {
                 city: rentproperty?.city,
                 postCode: rentproperty?.postCode
             }, 'Tenant', newTenant?._id, req.query.addedByModel);
-            let userData
+            let userData = {}
+            let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city emailto emailcc').lean()
             if (['company-agent', 'staff'].includes(data?.addedByRole)) {
                 let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' })
-                userData = staffdata?.addedBy
+                userData = { ...staffdata?.addedBy, ...rslData }
             } else {
-                userData = await user.findById(data?.addedBy).lean()
+                let agentData = await user.findById(data?.addedBy).lean()
+                userData = { ...agentData, ...rslData }
             }
 
 
             const pdfTemplets = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
-            const mailsArray = [{ subject: '', emailType: 'new_tanant', filename: '', tempId: '' }]
+            const mailsArray = []
             for (let template of pdfTemplets) {
                 mailsArray.push({ emailType: 'new_tanant', filename: template?.name, tempId: template?._id })
             }
             for (const mail of mailsArray) {
-                await ProcessTenant(userData, newTenant, mail?.filename, mail?.emailType)
+                await ProcessTenant(userData, newTenant, mail?.filename, mail?.emailType, mail?.tempId)
             }
         }
 
@@ -214,7 +215,6 @@ export const AddTenants = async (req, res) => {
 
             res.status(200).json({
                 success: true,
-                // data: tenant,
             });
         }
 
@@ -562,8 +562,6 @@ export const getTenantDetails = async (req, res) => {
         ]);
 
         const rslDocuments = await Template.find({ rsl: new mongoose.Types.ObjectId(tenant[0].rslDetails?._id) }).select('_id name')
-        // console.log(rslDocuments)
-
 
         if (!tenant) {
             return res.status(404).json({
@@ -586,3 +584,37 @@ export const getTenantDetails = async (req, res) => {
         });
     }
 }
+
+export const checkForNINO = async (req, res) => {
+    try {
+        const { nino } = req.query;
+
+        if (!nino) {
+            return res.status(400).send({
+                success: false,
+                message: "National Insurance number is required.",
+            });
+        }
+
+        const users = await Tenants.find({ nationalInsuranceNumber: nino });
+
+        if (users?.length > 0) {
+            return res.status(200).send({
+                exists: true,
+                success: false,
+                message: "National Insurance number is already in use.",
+            });
+        }
+
+        return res.status(200).send({
+            exists: false,
+            success: true,
+        });
+    } catch (error) {
+        return res.status(500).send({
+            success: false,
+            message: 'Failed to fetch tenant details.',
+            error: error.message,
+        });
+    }
+};

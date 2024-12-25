@@ -80,7 +80,19 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    
+    otp: {
+        type: Number,
+        default: undefined
+    },
+    verificationTokenExpires: { type: Date, default: undefined },
+    verificationToken: { type: String, default: undefined},
+    coruspondingEmail: {
+        type: String,
+        required: true,
+        unique: true,
+        match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    }
+
 }, {
     timestamps: true,
 });

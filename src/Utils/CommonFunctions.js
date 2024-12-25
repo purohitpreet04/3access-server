@@ -7,6 +7,9 @@ import { tenatsignImageArray } from '../../test.js';
 import { getPreSignedUrl } from './s3Config.js';
 import axios from 'axios';
 import sanitizeHtml from 'sanitize-html';
+import crypto from 'crypto';
+
+
 config()
 
 export const HandleError = (req, res, error = {}, status = 500, message) => {
@@ -206,10 +209,9 @@ export async function generateHtmlforPdf(template, data) {
     // Replace placeholders with pdfMake-compatible replacements
     let result = template;
     replacements.forEach(({ placeholder, replacement }) => {
-      // Handle replacement objects for pdfMake (like images)
       if (typeof replacement === 'object') {
         result = result.replace(placeholder, `
-              <img src="${replacement?.image}" alt="signs" style="height: 200px; width: 200px; object-fit: cover; margin-right: 10px;" />
+              <img src="${replacement?.image}" alt="signs" style="height: 200px; width: 200px;" />
               `);
       } else {
         result = result.replace(placeholder, replacement);
@@ -218,7 +220,8 @@ export async function generateHtmlforPdf(template, data) {
 
     return result; // Convert stringified objects back to JSON format
   } catch (error) {
-    console.error('Error replacing placeholders:');
+
+    console.error('Error replacing placeholders:', error.message);
   }
 }
 
@@ -266,4 +269,24 @@ export const sanitizeContent = (htmlContent) => {
     // .replace(/<table([^>]*)style="([^"]*)"/g, '<table$1style="$2; width:100%;"') // Append width to existing style
     .replace(/<table(?![^>]*style)/g, '<table style="width:100%;"'); // Add style if it doesn't exist
   return htmlContent;
+};
+
+
+export const generateOTP = (length = 6) => {
+  const digits = '0123456789';
+  let otp = '';
+  
+  for (let i = 0; i < length; i++) {
+      otp += digits[Math.floor(Math.random() * 10)];
+  }
+  
+  return otp;
+};
+
+export const generateVerificationToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+export const isTokenExpired = (expiryDate) => {
+  return new Date() > expiryDate;
 };

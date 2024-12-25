@@ -6,6 +6,7 @@ const TemplateSchema = new mongoose.Schema({
     subject: { type: String, default:'' },
     body: { type: String, required: true },
     name: { type: String, required: true },
+    key: { type: String, required: true },
 }, { timestamps: true });
 
 const Template = mongoose.model('Template', TemplateSchema);

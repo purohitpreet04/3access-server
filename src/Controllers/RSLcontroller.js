@@ -271,7 +271,7 @@ export const getAllSuggetion = async (req, res) => {
 
 export const AddNewTemplate = async (req, res) => {
     try {
-        const { subject, body, addedBy, rsl, _id, name } = req.body;
+        const { subject, body, addedBy, rsl, _id, name, key } = req.body;
 
 
 
@@ -282,8 +282,9 @@ export const AddNewTemplate = async (req, res) => {
 
 
         if (_id) {
+            
             const updateTemp = await Template.findByIdAndUpdate(_id, {
-                subject, body: senitizedHtml, addedBy, rsl, name
+                subject, body, addedBy, rsl, name, key
             }, { upsert: true });
             if (!updateTemp) {
                 return res.status(200).json({ message: 'Template not found!', severity: 'error', success: false });
@@ -291,7 +292,7 @@ export const AddNewTemplate = async (req, res) => {
                 return res.status(200).json({ message: 'Your Template has been updated Successfully', severity: 'success', success: true });
             }
         } else {
-            const newTemplate = new Template({ subject, body: senitizedHtml, addedBy, rsl, name })
+            const newTemplate = new Template({ subject, body: senitizedHtml, addedBy, rsl, name, key })
             await newTemplate.save()
             return res.status(200).json({ message: `Your new Template ${name} has been saved Successfully`, severity: 'success', success: true });
         }

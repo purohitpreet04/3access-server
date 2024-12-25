@@ -237,12 +237,10 @@ export const GeneratePdfController = async (req, res) => {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Length', pdfBuffer.length);
         res.setHeader('Content-Disposition', 'attachment; filename=document.pdf');
-        
         return res.end(pdfBuffer);
-        
 
     } catch (error) {
-        
+
         res.status(500).json({
             success: false,
             message: 'Failed to generate pdf',
@@ -268,6 +266,7 @@ export const fetchUserDetails = async (req, response) => {
             res = {
                 success: true,
                 user: {
+                    coruspondingEmail: addedBy_user?.coruspondingEmail,
                     username: User?.username,
                     addedBy: User?.addedBy,
                     address: User.address,
@@ -287,6 +286,7 @@ export const fetchUserDetails = async (req, response) => {
             res = {
                 success: true,
                 user: {
+                    coruspondingEmail:User?.coruspondingEmail,
                     address: User.address,
                     fname: User.fname,
                     lname: User.lname,

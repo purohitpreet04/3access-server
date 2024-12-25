@@ -137,6 +137,7 @@ export const getAllProperty = async (req, res) => {
             .limit(limitNumber)
             .lean();
         const flattenedProperties = properties.map(property => {
+            let tenantcount = property?.tenants.filter(tenant => tenant?.tenant_id).length
             if (property.addedBy) {
                 let { _id,
                     address,
@@ -164,6 +165,7 @@ export const getAllProperty = async (req, res) => {
                         sharedWithOther,
                         addedById,
                         visibleTo,
+                        tenants: tenantcount,
                         ...restdata,
                     };
 
@@ -181,6 +183,7 @@ export const getAllProperty = async (req, res) => {
                     sharedWithOther,
                     addedById,
                     visibleTo,
+                    tenants: tenantcount,
                     ...restdata,
                 };
             }
@@ -197,7 +200,7 @@ export const getAllProperty = async (req, res) => {
         });
 
     } catch (error) {
-        // console.log(error)
+        console.log(error)
         res.status(500).json({ message: 'Failed to fetch properties', success: false });
     }
 }
