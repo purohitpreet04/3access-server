@@ -1,10 +1,6 @@
 
 import bcrypt from 'bcryptjs'
-import Staff from '../DB/Schema/StaffSchema.js';
 import mongoose, { Mongoose } from 'mongoose';
-import user from '../DB/Schema/userSchema.js';
-import Property from '../DB/Schema/PropertySchema.js';
-import logUserAction from './ActivityController.js';
 
 export const AddNewStaff = async (req, res) => {
     const { coruspondingEmail,_id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
@@ -25,7 +21,6 @@ export const AddNewStaff = async (req, res) => {
         password,
         Property_per,
     };
-
 
     if (password) {
         staffData.password = await bcrypt.hash(password, 10);
