@@ -23,12 +23,47 @@ export const generateToken = (id) => {
 };
 
 export const getDate = (date, format = "DD-MM-YYYY") => {
-  if (date == (null || '')) {
-    return moment().format(format)
-  } else {
-    return date != ('' || null) ? moment(date).format(format) : ''
+  if (!date) {
+    return moment().format(format);
   }
+
+  const parsedDate = moment(date, moment.ISO_8601, true);
+  if (!parsedDate.isValid()) {
+    return ""; 
+  }
+
+  return parsedDate.format(format);
 }
+
+// export const getDate = (date, format = "DD-MM-YYYY") => {
+//   if (!date) {
+//     return formatDate(new Date(), format);
+//   }
+//   const parsedDate = new Date(date);
+//   if (isNaN(parsedDate.getTime())) {
+//     return "";
+//   }
+//   return formatDate(parsedDate, format);
+// };
+
+// const formatDate = (date, format) => {
+  
+//   const day = String(date.getUTCDate()).padStart(2, "0");
+//   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+//   const year = date.getUTCFullYear();
+
+//   switch (format) {
+//     case "DD-MM-YYYY":
+//       return `${day}-${month}-${year}`;
+//     case "MM-DD-YYYY":
+//       return `${month}-${day}-${year}`;
+//     case "YYYY-MM-DD":
+//       return `${year}-${month}-${day}`;
+//     default:
+//       throw new Error("Unsupported format");
+//   }
+// };
+
 
 
 export const generateAttachments = (filePath) => {
@@ -275,11 +310,11 @@ export const sanitizeContent = (htmlContent) => {
 export const generateOTP = (length = 6) => {
   const digits = '0123456789';
   let otp = '';
-  
+
   for (let i = 0; i < length; i++) {
-      otp += digits[Math.floor(Math.random() * 10)];
+    otp += digits[Math.floor(Math.random() * 10)];
   }
-  
+
   return otp;
 };
 

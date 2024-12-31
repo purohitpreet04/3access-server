@@ -61,7 +61,7 @@ const uploadAndProcessFiles = (folder) => {
                 // Process uploaded PDFs
                 if (req.files?.pdf) {
 
-                    const imageUploads = req.files.image.map((file) => uploadImageToS3(file, 'pdf'));
+                    const imageUploads = req.files.pdf.map((file) => uploadImageToS3(file, 'pdf'));
                     const uploadedImages = await Promise.all(imageUploads);
                     uploadedFiles.push(...uploadedImages);
                 }

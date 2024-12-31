@@ -7,6 +7,7 @@ const TemplateSchema = new mongoose.Schema({
     body: { type: String, required: true },
     name: { type: String, required: true },
     key: { type: String, required: true },
+    newAdd: { type: Boolean, default: false },
 }, { timestamps: true });
 
 const Template = mongoose.model('Template', TemplateSchema);

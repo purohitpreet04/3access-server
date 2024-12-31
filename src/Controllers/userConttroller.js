@@ -145,7 +145,7 @@ export const getEmails = async (req, res) => {
         }
 
         // Find the user by ID
-        const User = await RSL.findById(_id);
+        const User = await user.findById(_id);
 
         // Check if the User exists
         if (!User) {
@@ -202,7 +202,7 @@ export const GetEmailLogs = async (req, res) => {
                 { subject: { $regex: search, $options: 'i' } }
             ]
         })
-            .sort({ createdAt: -1 }) // Sort by newest first
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(pageSize)
             .lean();
@@ -258,7 +258,15 @@ export const fetchUserDetails = async (req, response) => {
         let User
         let res
         if (['staff', 'company-staff'].includes(role)) {
-            User = await Staff.findById(new mongoose.Types.ObjectId(_id), { password: 0 }).populate({ path: 'addedBy', select: '_id fname lname role email phonenumber' })
+            User = await Staff.findOne({ _id: new mongoose.Types.ObjectId(_id), status: 0 }, { password: 0 }).populate({ path: 'addedBy', select: '_id fname lname role email phonenumber' })
+            if (!User) {
+              return  response.status(404).json({
+                    success: false,
+                    message: 'User Not found',
+
+                });
+            }
+
             let addedBy_user = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean()
             if (['agent'].includes(addedBy_user?.role) && [0].includes(addedBy_user?.status) && [0].includes(addedBy_user?.isMainMA)) {
                 return response.status(401).send({ message: 'Access denied!', severity: 'error' });
@@ -279,14 +287,25 @@ export const fetchUserDetails = async (req, response) => {
                 },
             }
         } else {
-            User = await user.findById(new mongoose.Types.ObjectId(_id), { password: 0 }).lean()
+            User = await user.findOne({ _id: new mongoose.Types.ObjectId(_id)}, { password: 0 }).lean()
+           
+            if (!User) {
+             return   response.status(404).json({
+                    success: false,
+                    message: 'User Not found',
+
+                });
+            }
+           
             if (['agent'].includes(User?.role) && [0].includes(User?.status) && [0].includes(User?.isMainMA)) {
                 return response.status(401).send({ message: 'Access denied!', severity: 'error' });
             }
+
+
             res = {
                 success: true,
                 user: {
-                    coruspondingEmail:User?.coruspondingEmail,
+                    coruspondingEmail: User?.coruspondingEmail,
                     address: User.address,
                     fname: User.fname,
                     lname: User.lname,
@@ -299,6 +318,35 @@ export const fetchUserDetails = async (req, response) => {
                     emailto: User?.emailto,
                     emailcc: User?.emailcc,
                 },
+            }
+            let agentCount = { active: 0, inactive: 0 }
+            if (['agent'].includes(User?.role) && [1].includes(User?.isMainMA)) {
+                const agentCounts = await user.aggregate([
+                    {
+                        $match: {
+                            delStatus: 0,
+                            isMainMA: 0,
+                            role: 'agent',
+                            _id: { $ne: new mongoose.Types.ObjectId(_id) }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: '$status',
+                            count: { $sum: 1 }
+                        }
+                    }
+                ]);
+
+                agentCounts.forEach(count => {
+                    if (count._id === 1) {
+                        agentCount.active = count.count;
+                    } else {
+                        agentCount.inactive = count.count;
+                    }
+                });
+
+                res.user = { ...res?.user, ...agentCount }
             }
         }
         return response.status(200).send(res)
@@ -374,6 +422,7 @@ export const AgentDetails = async (req, res) => {
         const data = await user.aggregate([
             {
                 $match: {
+                    delStatus: 0,
                     isMainMA: 0,
                     role: 'agent',
                     ...(search && {
@@ -464,6 +513,7 @@ export const AgentDetails = async (req, res) => {
             // Pagination
             { $skip: skip },
             { $limit: Number(limit) },
+            { $sort: { createdAt: 1 } }
         ]);
 
         // Total count for pagination metadata

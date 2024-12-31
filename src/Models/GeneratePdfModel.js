@@ -1,5 +1,8 @@
 import { getDynemicPdf } from "./GetDynemicDocuments.js";
 import puppeteer from "puppeteer";
+import Property from "../DB/Schema/PropertySchema.js";
+import user from "../DB/Schema/userSchema.js";
+import RSL from "../DB/Schema/RSLSchema.js";
 
 export const GeneratePdf = async (type, id) => {
     let browser = null;

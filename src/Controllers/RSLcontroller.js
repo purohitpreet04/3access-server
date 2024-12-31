@@ -105,8 +105,6 @@ export const RegisterNewRSL = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error);
-        
         return HandleError(req, res, error)
     }
 }
@@ -217,14 +215,30 @@ export const getRSL = async (req, res) => {
 
 export const DeleteRsl = async (req, res) => {
     try {
-        const { _id, addedByModel } = req.query;
+        const { _id, addedByModel, password } = req.query;
+        
+        const user = await req.headers['user'];
+        const isMainUser = await user.findOne({ _id: user, ismainAgent: 1 });
+
+        if (!password) {
+            return res.status(401).json({ message: 'Please enter Password!' });
+        }
+
+        if (!isMainUser) {
+            return res.status(401).json({ message: 'Access Denied!' });
+        }
+        const isPasswordMatched = await bcrypt.compare(password, isMainUser.password);
+        if (!isPasswordMatched) {
+            return res.status(401).json({ message: 'Password not matched!' });
+        }
+
         const rsl = await RSL.findByIdAndUpdate(_id, { status: 1 })
         if (!rsl) {
-            return res.status(404).json({ message: 'Property not found' });
+            return res.status(404).json({ message: 'RSL not found' });
         }
         const userId = req.headers['user']
         await logUserAction(userId, 'DELETE', {}, 'RSL', _id, addedByModel);
-        res.status(200).json({ message: 'Property deleted successfully', success: true });
+        res.status(200).json({ message: 'RSL deleted successfully', success: true });
     } catch (error) {
         return HandleError(req, res, error);
     }
@@ -297,6 +311,7 @@ export const AddNewTemplate = async (req, res) => {
         }
 
     } catch (error) {
+        
         return HandleError(req, res, error)
     }
 }
@@ -325,8 +340,8 @@ export const getAllRslTemplates = async (req, res) => {
         const templates = await Template.find(query)
             .select('name createdAt')
             .sort({ createdAt: -1 })
-            .skip((pageNumber - 1) * limitNumber)
-            .limit(limitNumber);
+            // .skip((pageNumber - 1) * limitNumber)
+            // .limit(limitNumber);
 
 
         // Send response with pagination details
@@ -362,6 +377,8 @@ export const getTemplateDetails = async (req, res) => {
             _id: new mongoose.Types.ObjectId(templateId),
         });
 
+      
+
         if (!template) {
             return res.status(404).json({
                 success: false,
@@ -374,6 +391,7 @@ export const getTemplateDetails = async (req, res) => {
             data: template,
         });
     } catch (error) {
+       
         return HandleError(req, res, error);
     }
 };

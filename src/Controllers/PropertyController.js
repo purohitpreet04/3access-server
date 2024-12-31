@@ -117,10 +117,10 @@ export const getAllProperty = async (req, res) => {
             }
             query = {
                 visibleTo: { $in: _id },
+                status: 0 ,
                 $or: [
                     // {visibleTo: { $in: _id }},
                     searchConditions,
-                    { status: 0 },
                     { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };

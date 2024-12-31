@@ -15,8 +15,10 @@ import path from 'path'
 import { initCronJobs } from "./src/Utils/CronJob.js";
 import { fileURLToPath } from "url";
 import rslRoutes from "./src/routes/RSLroutes.js";
+import { getDate } from "./src/Utils/CommonFunctions.js";
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
+
 config()
 const app = express()
 app.use(cors())
@@ -58,7 +60,6 @@ app.post('/api/base64', /* verifyJWT, */handleBase64Images() , (req, res) => {
         message: 'Files uploaded successfully',
     });
 });
-
 
 
 app.use((err, req, res, next) => {

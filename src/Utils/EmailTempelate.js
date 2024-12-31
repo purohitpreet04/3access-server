@@ -33,7 +33,8 @@ const EmailTempelates = (type, user) => {
     <tr>
         <td style="font-size: small; color: gray;">All rights reserved.</td>
     </tr>
-</table>`
+</table>`,
+        signOutTenant:``
     }
 
     return templates[type]

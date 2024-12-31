@@ -7,9 +7,10 @@ import Property from '../DB/Schema/PropertySchema.js';
 import logUserAction from './ActivityController.js';
 
 export const AddNewStaff = async (req, res) => {
-    const { _id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
+    const { coruspondingEmail,_id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
 
     const staffData = {
+        coruspondingEmail,
         jobTitle,
         fname,
         lname,
@@ -121,6 +122,8 @@ export const AddNewStaff = async (req, res) => {
             res.status(201).json({ message: 'Staff added successfully', severity: 'sucsess', success: true });
         }
     } catch (error) {
+        console.log(error);
+        
         if (error.name === 'ValidationError') {
             return res.status(400).json({ message: 'Validation error', errors: error.errors, severity: 'error', success: false });
         }

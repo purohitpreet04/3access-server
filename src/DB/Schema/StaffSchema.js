@@ -31,9 +31,7 @@ const staffSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
-    unique: true,
-    match: /.+\@.+\..+/
+    default:''
   },
   password: {
     type: String,
@@ -56,6 +54,12 @@ const staffSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'User'
+  },
+  coruspondingEmail: {
+    type: String,
+    required: true,
+    // unique: true,
+    // match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
   status: { type: Number, default: 0 }
 }, { timestamps: true });

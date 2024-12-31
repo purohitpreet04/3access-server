@@ -94,6 +94,10 @@ const userSchema = new mongoose.Schema({
     },
     emailto: { type: String, default: '' },
     emailcc: { type: String, default: '' },
+    delStatus: {
+        type: Number,
+        default: 0
+    },
 }, {
     timestamps: true,
 });

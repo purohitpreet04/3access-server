@@ -12,11 +12,34 @@ export const rslData = [
     { key: 'role', label: 'Role' },
     { key: 'emailto', label: 'Email To' },
     { key: 'emailcc', label: 'Email CC' },
-    { key: 'addedBy', label: 'Added By' }
+    { key: 'addedBy', label: 'Added By' },
+    { key: 'maname', label: 'Management Agent Name' },
+    
+
 ];
 
 
-
+export const riskCategories = [
+    { label: "Violence / Aggression", name: "violenceAggression" },
+    { label: "Known associates", name: "knownAssociates" }, // New
+    { label: "Hazards from others (friend/family/visitors)", name: "hazardsFromOthers" }, // New
+    { label: "Recent discontinuation of medication", name: "medicationDiscontinuation" }, // New
+    { label: "Professional boundaries", name: "professionalBoundaries" },
+    { label: "Finance / Gambling / Debt", name: "financeGamblingDebt" },
+    { label: "Attempted suicide", name: "attemptedSuicide" }, // New
+    { label: "Arson", name: "arson" },
+    { label: "Violent ideas/acts", name: "violentIdeasActs" }, // New
+    { label: "Substance abuse/alcohol misuse", name: "substanceAbuse" },
+    { label: "Harm to self, others or from others/injurious behaviour", name: "harmToSelfOthers" }, // New
+    { label: "Criminal/police or court involvement", name: "criminalInvolvement" }, // New
+    { label: "Offending behaviour", name: "offendingBehaviour" },
+    { label: "Anti-social behaviour", name: "antiSocialBehaviour" },
+    { label: "Physical Health", name: "physicalHealth" },
+    { label: "Mental Health", name: "mentalHealth" },
+    { label: "Sex Offences", name: "sexOffences" }, // New
+    { label: "Domestic Abuse", name: "domesticAbuse" }, // New
+    { label: "Extreme anger and hostility", name: "extremeanger" }, // New
+];
 
 // rslname: data?.property.rslTypeGroup.companyname,
 // rslAddress:data?.property.rslTypeGroup.address,
@@ -36,14 +59,16 @@ export const propertyFormFields = [
     { key: 'pro_postCode', label: 'Post Code' },
     { key: 'pro_serviceCharges', label: 'Service Charges' },
     { key: 'pro_area', label: 'Area' },
+    { key: 'ineligibleCharge', label: 'Weekly Ineligible Charge' },
+    { key: 'pro_bedrooms', label: 'Number of Bedrooms' },
+    { key: 'two_weeksserviceCharge', label: '2 weeks Service Charges' },
+    { key: 'basicRent', label: 'Basic Rent' },
     // { key: 'visibleTo', label: 'Visible To' },
     // { key: 'addedBy', label: 'Added By' },
     // { key: 'addedByModel', label: 'Added By Model' },
     // { key: 'councilTaxPayer', label: 'Council Tax Payer' },
     // { key: 'rslTypeGroup', label: 'RSL Type Group' },
-    // { key: 'bedrooms', label: 'Number of Bedrooms' },
     // { key: 'basicRent', label: 'Basic Rent' },
-    // { key: 'ineligibleCharge', label: 'Ineligible Charge' },
     // { key: 'sharedWithOther', label: 'Shared With Other' },
     // { key: 'otherInformation', label: 'Other Information' },
     // { key: 'bedist', label: 'Bedist' },
@@ -87,9 +112,9 @@ export const tenatsignImageArray = [
     { key: "supportWorkerSignature", label: "Support Worker Signature" },
     { key: "tenantSignature", label: "Tenant Signature" },
     { key: "staffSignature", label: "Staff Signature" },
-    
-  ];
-  
+
+];
+
 
 export const tenantields = [
     { key: 'hasGPInfo', label: 'Has GP Info' },
@@ -209,5 +234,106 @@ export const tenantields = [
     { key: 'otherSupport', label: 'Other Support' },
     { key: 'additionalInformation', label: 'Additional Information' },
     { key: 'signatureOfApplicant', label: 'Signature of Applicant' },
-    
+    { key: 'supportPersonName', label: 'Support Person' },
+    { key: 'signOutBy', label: 'Sign Out By' },
+    { key: 'subjecttoorder', label: 'Subject to Order' },
+    { key: 'supportNeeds', label: 'Support Needs' },
+    { key: 'homeNo', label: 'Home Number' },
+    { key: 'workNo', label: 'Work Number' },
+    { key: 'communicationNeeds', label: 'Communication Needs' },
+    { key: 'dateOfAssessment', label: 'Date of Assessment' },
+    { key: 'debt', label: 'Debt' },
+    { key: 'debts', label: 'Debts' },
+    { key: 'gamblingIssues', label: 'Gambling Issues' },
+    { key: 'criminalRecords', label: 'Criminal Records' },
+    { key: 'fullcheck', label: 'Full Check' },
+    { key: 'supportFromAgencies', label: 'Support From Agencies' },
+    { key: 'physicalHealthcon', label: 'Physical Health Concern' },
+    { key: 'mentalHealthcon', label: 'Mental Health Concern' },
+    { key: 'prescribedMedication', label: 'Prescribed Medication' },
+    { key: 'selfHarmcon', label: 'Self Harm Concern' },
+    { key: 'drug', label: 'Drug Use' },
+    { key: 'isotherRisk', label: 'Other Risks' },
+    { key: 'mentalHealthdig', label: 'Mental Health Diagnosis' },
+    { key: 'related_under_condition', label: 'Related Under Condition' },
+    { key: 'records', label: 'Records' },
+    { key: 'prison', label: 'Prison' },
+    { key: 'family_support', label: 'Family Support' },
+    { key: 'family_support_who', label: 'Family Support (Who)' },
+    { key: 'currentAssessmentDate', label: 'Current Assessment Date' },
+    { key: 'checklist', label: 'Checklist' },
+    { key: 'preferredArea', label: 'Preferred Area' },
+    { key: 'ethnicOrigin', label: 'Ethnic Origin' },
+    { key: 'religion', label: 'Religion' },
+    { key: 'sexualOrientation', label: 'Sexual Orientation' },
+    { key: 'sourceOfIncome', label: 'Source of Income' },
+    { key: 'totalAmount', label: 'Total Amount' },
+    { key: 'howOften', label: 'How Often' },
+    { key: 'debtdetails', label: 'Debt Details' },
+    { key: 'gamblingIssuesdetails', label: 'Gambling Issues Details' },
+    { key: 'qualifyreason', label: 'Qualify Reason' },
+    // { key: 'tenantSignature', label: 'Tenant Signature' },
+    { key: 'socialWorker', label: 'Social Worker' },
+    { key: 'probationOfficer', label: 'Probation Officer' },
+    { key: 'probationOfficerContactNo', label: 'Probation Officer Contact Number' },
+    { key: 'cpn', label: 'Community Psychiatric Nurse (CPN)' },
+    { key: 'probationOfficerAddress', label: 'Probation Officer Address' },
+    { key: 'psychiatristPsychologist', label: 'Psychiatrist or Psychologist' },
+    { key: 'physicalHealthdetails', label: 'Physical Health Details' },
+    { key: 'mentalHealthdetails', label: 'Mental Health Details' },
+    { key: 'mentalHealthdigdetails', label: 'Mental Health Diagnosis Details' },
+    { key: 'prescribedMedicationdetails', label: 'Prescribed Medication Details' },
+    { key: 'related_under_condition_what', label: 'Related Under Condition (What)' },
+    { key: 'related_under_condition_date', label: 'Related Under Condition (Date)' },
+    { key: 'whenprison', label: 'When in Prison' },
+    { key: 'reason_for_prison', label: 'Reason for Prison' },
+    { key: 'release_date', label: 'Release Date' },
+    { key: 'details', label: 'Details' },
+    { key: 'when', label: 'When' },
+    { key: 'where', label: 'Where' },
+    { key: 'how', label: 'How' },
+    { key: 'claiming_benefits', label: 'Claiming Benefits' },
+    { key: 'drug_use', label: 'Drug Use' },
+    { key: 'method_of_administration', label: 'Method of Administration' },
+    { key: 'administered', label: 'Administered' },
+    { key: 'injection_body_part', label: 'Injection Body Part' },
+    { key: 'drug_worker', label: 'Drug Worker' },
+    { key: 'drug_team', label: 'Drug Team' },
+    { key: 'accessingBenefits', label: 'Accessing Benefits' },
+    { key: 'budgeting', label: 'Budgeting' },
+    { key: 'reducingDebt', label: 'Reducing Debt' },
+    { key: 'learnToShopWisely', label: 'Learn to Shop Wisely' },
+    { key: 'settingUpAccount', label: 'Setting Up Account' },
+    { key: 'recoupMoniesOwed', label: 'Recoup Monies Owed' },
+    { key: 'manageMentalHealth', label: 'Manage Mental Health' },
+    { key: 'managePhysicalHealth', label: 'Manage Physical Health' },
+    { key: 'followHealthyDiet', label: 'Follow Healthy Diet' },
+    { key: 'maintainHygiene', label: 'Maintain Hygiene' },
+    { key: 'reduceSubstanceMisuse', label: 'Reduce Substance Misuse' },
+    { key: 'registerGP', label: 'Register GP' },
+    { key: 'accessingTrainingEducation', label: 'Accessing Training/Education' },
+    { key: 'accessingEmployment', label: 'Accessing Employment' },
+    { key: 'accessingLeisure', label: 'Accessing Leisure' },
+    { key: 'accessingVolunteering', label: 'Accessing Volunteering' },
+    { key: 'moveOn', label: 'Move On' },
+    { key: 'supportEqualityDiversity', label: 'Support Equality and Diversity' },
+    { key: 'change_offending_behaviour', label: 'Change Offending Behaviour' },
+    { key: 'access_support_services', label: 'Access Support Services' },
+    { key: 'establishingSupportNetworks', label: 'Establishing Support Networks' },
+    { key: 'addressAntiSocialBehaviour', label: 'Address Anti-Social Behaviour' },
+    { key: 'addressOffendingBehaviour', label: 'Address Offending Behaviour' },
+    { key: 'developLivingSkills', label: 'Develop Living Skills' },
+    { key: 'maintainAccommodation', label: 'Maintain Accommodation' },
+    { key: 'minimizeRiskOfHarm', label: 'Minimize Risk of Harm' },
+    { key: 'violenceAggression', label: 'Violence and Aggression' },
+    { key: 'knownAssociates', label: 'Known Associates' },
+    { key: 'hazardsFromOthers', label: 'Hazards From Others' },
+    { key: 'otherRisk', label: 'Other Risk' },
+    { key: 'interim_risk_review_details', label: 'Interim Risk Review Details' },
+    { key: 'family_support_level', label: 'Family Support Level' },
+    { key: 'family_support_why', label: 'Family Support (Why)' },
+    { key: 'nextAssessmentDate', label: 'Next Assessment Date' },
+    { key: 'risk_Identified', label: 'Risk Identified' },
+
+
 ];

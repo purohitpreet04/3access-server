@@ -63,8 +63,6 @@ const rslSchema = new mongoose.Schema({
         type: String,
         require: true
     },
-    emailto: { type: String, default: '' },
-    emailcc: { type: String, default: '' },
     addedBy: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
