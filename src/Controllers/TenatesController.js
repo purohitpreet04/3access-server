@@ -16,13 +16,24 @@ import RSL from "../DB/Schema/RSLSchema.js";
 import { Worker } from 'worker_threads';
 import path from 'path';
 import { __dirname } from '../../index.js'
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3 } from "../Utils/s3.js";
 
 // const workerPool = new WorkerPool(3);
 
 export const AddTenants = async (req, res) => {
     try {
         const { _id, property, room, ...data } = req.body;
-        let rentproperty = await Property.findById(property).lean();
+        // let rentproperty = await Property.findById(property).lean();
+        if (!data?.firstName || !data?.lastName) {
+            return res.status(400).json({ success: false, message: 'First name and last name are required for the tenant' });
+        }
+        const [rentproperty, existingTenant] = await Promise.all([
+            Property.findById(property).lean(),
+            Tenants.findOne({ isSignOut: 0, room, property, }).lean(),
+            // Template.find({ rsl: rentproperty?.rslTypeGroup }).lean(),
+        ]);
+
         let tenant;
         if (_id) {
             tenant = await Tenants.findByIdAndUpdate(_id, data, { new: true, upsert: true });
@@ -42,19 +53,37 @@ export const AddTenants = async (req, res) => {
             }
         } else {
 
-            // Function to generate mail options dynamically
 
             if (!property) {
                 return res.status(400).json({ success: false, message: 'Property ID is required' });
             }
-            if (!data.firstName || !data.lastName) {
-                return res.status(400).json({ success: false, message: 'First name and last name are required for the tenant' });
+
+            if (existingTenant) {
+                return res.status(400).json({ success: false, message: 'This Room Already Occupied', data: { fname: existingTenant.firstName, lname: existingTenant?.lastName, _id: existingTenant?._id } });
             }
-            let checkroom = await Tenants.findOne({ isSignOut: 0, room: room, property })
-            if (checkroom) {
-                // console.log(checkroom)
-                return res.status(400).json({ success: false, message: 'This Room Already Occupied' });
+
+            for (let key in req.body) {
+                const value = req.body[key];
+
+                if (typeof value === 'string' && value.startsWith('data:image/png;base64,')) {
+                    try {
+                        const base64Data = value.replace(/^data:image\/png;base64,/, '');
+                        const fileName = `${Date.now()}-${key}.png`;
+                        const buffer = Buffer.from(base64Data, 'base64');
+                        const params = {
+                            Bucket: process.env.AWS_S3_BUCKET, // Your S3 bucket name
+                            Key: `uploads/signatures/${fileName}`, // S3 object key
+                            Body: buffer,
+                            ContentType: 'image/png', // MIME type of the image
+                        }
+                        await s3.send(new PutObjectCommand(params));
+                        req.body[key] = `uploads/signatures/${fileName}`
+                    } catch (err) {
+                        return res.status(500).json({ error: "Failed to process image" });
+                    }
+                }
             }
+
 
             tenant = new Tenants({ ...data, property, room });
             const newTenant = await tenant.save();
@@ -77,9 +106,9 @@ export const AddTenants = async (req, res) => {
                 let agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean()
                 userData = { user_id: agentData?._id, ...agentData, ...rslData }
             }
-            const pdfTemplets = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
+            const pdfTemplates = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
             const attachmentsArray = await Promise.all(
-                pdfTemplets.map(async (pdfTemplet) => {
+                pdfTemplates.map(async (pdfTemplet) => {
                     const pdfBuffer = await GeneratePdf(pdfTemplet?._id, newTenant?._id);
                     return {
                         filename: pdfTemplet?.name,
@@ -88,13 +117,12 @@ export const AddTenants = async (req, res) => {
                     };
                 })
             );
-
             const mailObj = {
                 replyTo: userData?.emailto,
                 to: userData?.emailto,
                 bcc: userData?.emailcc,
                 subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} ${newTenant?.middleName || ''} ${newTenant?.lastName || ''}, ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
-                html: EmailTempelates("new_tanant", newTenant),
+                html: EmailTempelates("new_tanant", { newTenant, address: rentproperty?.address, area: rentproperty?.area, city: rentproperty?.city, postCode: rentproperty?.postCode }),
                 attachments: [...attachmentsArray],
             };
 
@@ -109,51 +137,14 @@ export const AddTenants = async (req, res) => {
                 emailCC: mailObj?.bcc,
             });
             await log.save();
-
-
-
-
-            // let workerData = JSON.stringify({ userData, newTenant, rentproperty, pdfTemplets })
-            // const worker = new Worker(path.join(__dirname, 'src', 'WorkerServices', 'Worker.js'));
-            // worker.postMessage(workerData);
-
-            // worker.on('message', (message) => {
-            //     console.log('Worker finished task:', message);
-            // });
-
-            // worker.on('error', (error) => {
-            //     console.error('Worker error:', error);
-            // });
-
-            // worker.on('exit', (code) => {
-            //     if (code !== 0) {
-            //         console.error(`Worker stopped with exit code ${code}`);
-            //     }
-            // });
-            // await workerPool.runTask(workerData)
-            // await workerPool.runTask({
-            //     userData,
-            //     newTenant,
-            //     rentproperty
-            // })
-            // const pdfTemplets = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
-            // const mailsArray = []
-            // for (let template of pdfTemplets) {
-            //     mailsArray.push({ emailType: 'new_tanant', filename: template?.name, tempId: template?._id })
-            // }
-            // for (const mail of mailsArray) {
-            //     await ProcessTenant(userData, newTenant, mail?.filename, mail?.emailType, mail?.tempId)
-            // }
         }
 
 
-        if (property && tenant._id) {
 
+        if (property && tenant._id) {
             if (!rentproperty) {
                 return res.status(404).json({ success: false, message: 'Property not found' });
             }
-
-
             await Property.updateOne(
                 { _id: property },
                 [
@@ -218,14 +209,6 @@ export const AddTenants = async (req, res) => {
         }
 
     } catch (error) {
-        // if (error.code === 11000) {
-        //     return res.status(401).json({
-        //         success: false,
-        //         message: 'Email already exists',
-        //     });
-        // }
-        console.log(error);
-
         return res.status(500).json({
             success: false,
             message: 'Failed to add or update tenant',
@@ -234,6 +217,61 @@ export const AddTenants = async (req, res) => {
 
     }
 };
+
+export const UpdateAssessment = async (req, res) => {
+    try {
+        const { _id, assesment, assessmentId } = req.body;
+
+        if (!mongoose.isObjectIdOrHexString(_id)) {
+            return res.status(400).json({ success: false, message: 'Invalid Tenant ID' });
+        }
+
+        for (let key in assesment) {
+            const value = assesment[key];
+
+            if (typeof value === 'string' && value.startsWith('data:image/png;base64,')) {
+                try {
+                    const base64Data = value.replace(/^data:image\/png;base64,/, '');
+                    const fileName = `${Date.now()}-${key}.png`;
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const params = {
+                        Bucket: process.env.AWS_S3_BUCKET, // Your S3 bucket name
+                        Key: `uploads/signatures/${fileName}`, // S3 object key
+                        Body: buffer,
+                        ContentType: 'image/png', // MIME type of the image
+                    }
+                    await s3.send(new PutObjectCommand(params));
+                    assesment[key] = `uploads/signatures/${fileName}`
+                } catch (err) {
+                    return res.status(500).json({ error: "Failed to process image" });
+                }
+            }
+        }
+
+        if (assessmentId) {
+            await Tenants.updateOne(
+                { _id, "assesment._id": assessmentId },
+                { $set: { "assesment.$": assesment } }
+            );
+        } else {
+
+            await Tenants.updateOne(
+                { _id },
+                { $push: { assesment } } 
+            );
+        }
+
+        return res.status(200).json({ message: 'Assessment Updated Successfully', success: true });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to add or update tenant',
+            error: error.message || 'Internal server error',
+        });
+    }
+}
+
 
 export const ListTenents = async (req, res) => {
 
@@ -572,18 +610,40 @@ export const signOutTenantList = async (req, res) => {
 
 export const signOutTenants = async (req, res, next) => {
     try {
-        const { _id, propertyid, room, addedByModel } = req.query;
+        const { _id, propertyid, room, addedByModel, } = req.query;
+        const { withOutMail, signature, isPresent, signOutDate } = req.body;
+
         const userId = req.headers['user']
         if (!mongoose.isObjectIdOrHexString(_id)) {
             return res.status(400).json({ success: false, message: 'Invalid Tenant ID' });
         }
+        for (let key in req.body) {
+            const value = req.body[key];
 
+            if (typeof value === 'string' && value.startsWith('data:image/png;base64,')) {
+                try {
+                    const base64Data = value.replace(/^data:image\/png;base64,/, '');
+                    const fileName = `${Date.now()}-${key}.png`;
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const params = {
+                        Bucket: process.env.AWS_S3_BUCKET, // Your S3 bucket name
+                        Key: `uploads/signatures/${fileName}`, // S3 object key
+                        Body: buffer,
+                        ContentType: 'image/png', // MIME type of the image
+                    }
+                    await s3.send(new PutObjectCommand(params));
+                    req.body[key] = `uploads/signatures/${fileName}`
+                } catch (err) {
+                    return res.status(500).json({ error: "Failed to process image" });
+                }
+            }
+        }
         const tenantId = new mongoose.Types.ObjectId(_id);
         const propertyObjectId = new mongoose.Types.ObjectId(propertyid);
         let date = new Date()
         const tenant = await Tenants.findByIdAndUpdate(
             tenantId,
-            { isSignOut: true, signOutDate: date.toISOString(), signOutper: { byWhom: userId, addedByModel } },
+            { signoutsignature: req?.body?.signature, isPresent, isSignOut: true, signOutDate, signOutper: { byWhom: userId, addedByModel } },
             { new: true }
         );
 
@@ -610,52 +670,65 @@ export const signOutTenants = async (req, res, next) => {
             });
         }
 
-        const pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: 'leaverform' })
-        const pdfBuffer = await GeneratePdf(pdfTemplets?._id, tenantId);
-        let userData = {}
-        if (['Staff'].includes(addedByModel)) {
-            let staffdata = await Staff.findById(userId).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean()
-            userData = { ...staffdata?.addedBy }
-        } else {
-            let agentData = await user.findById(userId).select('emailcc emailto').lean()
-            userData = { ...agentData }
+        if (withOutMail === false) {
+
+            let pdfTemplets;
+            if (['6763a64fb4567a506762d235'].includes(updatedProperty?.rslTypeGroup)) {
+                pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: isPresent === true ? 'leaverform' : 'leaverform2' })
+            } else {
+                pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: 'leaverform' })
+            }
+
+            // pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: 'leaverform' })
+            const pdfBuffer = await GeneratePdf(pdfTemplets?._id, tenantId, {});
+            let userData = {}
+            if (['Staff'].includes(addedByModel)) {
+                let staffdata = await Staff.findById(userId).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean()
+                userData = { ...staffdata?.addedBy }
+            } else {
+                let agentData = await user.findById(userId).select('emailcc emailto').lean()
+                userData = { ...agentData }
+            }
+
+            await logUserAction(userId, 'DELETE', {
+                councilTaxPayer: updatedProperty.councilTaxPayer,
+                address: updatedProperty?.address,
+                area: updatedProperty?.area,
+                city: updatedProperty?.city,
+                postCode: updatedProperty?.postCode,
+                room: tenant?.room
+            }, 'Tenant', _id, req.query.addedByModel);
+
+            const mailObj = {
+                replyTo: userData?.emailto,
+                to: userData?.emailto,
+                bcc: userData?.emailcc,
+                subject: `Tenant Sign out from, ${updatedProperty?.address}, ${updatedProperty?.area}, ${updatedProperty?.city}, ${updatedProperty?.postCode}, ${tenant?.firstName || ''} ${tenant?.middleName || ''} ${tenant?.lastName || ''}, ${getDate(tenant?.dateOfBirth)}, ${tenant?.nationalInsuranceNumber}, ${getDate(tenant?.dateOfBirth)}`,
+                html: EmailTempelates("signOutTenant", tenant),
+                attachments: [{ filename: pdfTemplets?.name, content: pdfBuffer, contentType: 'application/pdf' }],
+            };
+            await sendMail(mailObj);
+            const log = new EmailLog({
+                userId: userData?._id,
+                subject: mailObj.subject,
+                body: mailObj.html,
+                attachments: mailObj?.attachments[0].filename,
+                emailTo: mailObj?.to,
+                emailCC: mailObj?.bcc,
+            });
+            await log.save();
         }
-        const mailObj = {
-            replyTo: userData?.emailto,
-            to: userData?.emailto,
-            bcc: userData?.emailcc,
-            subject: `Tenant Sign out from, ${updatedProperty?.address}, ${updatedProperty?.area}, ${updatedProperty?.city}, ${updatedProperty?.postCode}, ${tenant?.firstName || ''} ${tenant?.middleName || ''} ${tenant?.lastName || ''}, ${getDate(tenant?.dateOfBirth)}, ${tenant?.nationalInsuranceNumber}, ${getDate(tenant?.dateOfBirth)}`,
-            html: EmailTempelates("signOutTenant", tenant),
-            attachments: [{ filename: pdfTemplets?.name, content: pdfBuffer, contentType: 'application/pdf' }],
-        };
-        await sendMail(mailObj);
 
-        await logUserAction(userId, 'DELETE', {
-            councilTaxPayer: updatedProperty.councilTaxPayer,
-            address: updatedProperty?.address,
-            area: updatedProperty?.area,
-            city: updatedProperty?.city,
-            postCode: updatedProperty?.postCode,
-            room: tenant?.room
-        }, 'Tenant', _id, req.query.addedByModel);
 
-        const log = new EmailLog({
-            userId: userData?._id,
-            subject: mailObj.subject,
-            body: mailObj.html,
-            attachments: mailObj?.attachments[0].filename,
-            emailTo: mailObj?.to,
-            emailCC: mailObj?.bcc,
-        });
-        await log.save();
         return res.status(200).json({
             success: true,
             message: 'Tenant successfully signed out and removed from property.',
-            tenant,
-            updatedProperty,
+            // tenant,
+            // updatedProperty,
         });
 
     } catch (error) {
+        
         return res.status(500).json({
             success: false,
             message: 'Failed to sign out tenant',
@@ -731,6 +804,10 @@ export const getTenantDetails = async (req, res) => {
             { $unwind: { path: "$companyDetails", preserveNullAndEmptyArrays: true } },
             {
                 $project: {
+                    assessment: [{
+                        _id: 1,
+                        
+                    }],
                     title_before_name: 1,
                     middleName: 1,
                     lastName: 1,
@@ -764,7 +841,10 @@ export const getTenantDetails = async (req, res) => {
             }
         ]);
 
-        const rslDocuments = await Template.find({ rsl: new mongoose.Types.ObjectId(tenant[0].rslDetails?._id) }).select('_id name')
+        const rslDocuments = await Template.find({
+            rsl: new mongoose.Types.ObjectId(tenant[0].rslDetails?._id),
+            key: { $ne: 'leaverform' }
+        }).select('_id name');
 
         if (!tenant) {
             return res.status(404).json({
@@ -821,3 +901,28 @@ export const checkForNINO = async (req, res) => {
         });
     }
 };
+
+
+export const getAssessment = async (req, res) => {
+    try {
+        const { _id } = req.query;
+        const tenant = await Tenants.findById(_id).select('assesment').lean();
+        if (!tenant) {
+            return res.status(404).json({
+                success: false,
+                message: 'Tenant not found',
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            data: tenant,
+        });
+    }   
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch tenant details',
+            error: error.message,
+        });
+    }
+}

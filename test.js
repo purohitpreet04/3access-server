@@ -112,6 +112,7 @@ export const tenatsignImageArray = [
     { key: "supportWorkerSignature", label: "Support Worker Signature" },
     { key: "tenantSignature", label: "Tenant Signature" },
     { key: "staffSignature", label: "Staff Signature" },
+    { key: 'signoutsignature', label: 'Sign Out Signature' },
 
 ];
 
@@ -334,6 +335,11 @@ export const tenantields = [
     { key: 'family_support_why', label: 'Family Support (Why)' },
     { key: 'nextAssessmentDate', label: 'Next Assessment Date' },
     { key: 'risk_Identified', label: 'Risk Identified' },
+    { key: 'isPresent', label: 'is Tenant Present' },
+    // { key: 'signoutsignature', label: 'Sign Out Signature' },
 
 
 ];
+
+
+

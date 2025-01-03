@@ -7,7 +7,9 @@ import Tenants from "../DB/Schema/TenantsSchema.js";
 import { generateHtmlforPdf, getDate, replacePlaceholders } from "../Utils/CommonFunctions.js";
 import { getPreSignedUrl } from "../Utils/s3Config.js";
 
-export const getDynemicPdf = async (tempid, id, pdf) => {
+export const getDynemicPdf = async (tempid, id, pdf, otherData) => {
+
+
     let userdata;
     const html = await Template.findOne({ _id: tempid }).lean()
     let pdfTemp
@@ -39,6 +41,7 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
     }
 
     userdata = {
+        ...otherData,
         maname:maDetails,
         other_charges_of_tenant: data?.other_charges_of_tenant || '',
         title_before_name: data?.title_before_name || '',
@@ -90,7 +93,8 @@ export const getDynemicPdf = async (tempid, id, pdf) => {
         ineligibleCharge: data?.property?.ineligibleCharge || 0,
         pro_bedrooms: data?.property?.bedrooms || 0,
         two_weeksserviceCharge: data?.property?.serviceCharges * 2 || 0,
-        basicRent: data?.property?.basicRent || 0
+        basicRent: data?.property?.basicRent || 0,
+        isPresent:data?.isPresent
     };
 
     try {

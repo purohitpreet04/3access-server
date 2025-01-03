@@ -47,19 +47,6 @@ app.post('/api/upload', verifyJWT, uploadAndProcessFiles(), (req, res) => {
         files: fileUrls
     });
 });
-app.post('/api/base64', /* verifyJWT, */handleBase64Images() , (req, res) => {
-    // const fileUrls = req.uploadedFiles.map(file => ({
-    //     type: file.type,
-    //     name: file.filename,
-    //     path: `/uploads/${file.type}/${file.filename}`
-    // }));
-
-    res.json({
-        success: true,
-        data :req.body,
-        message: 'Files uploaded successfully',
-    });
-});
 
 
 app.use((err, req, res, next) => {

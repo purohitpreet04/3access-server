@@ -202,7 +202,7 @@ export const GetEmailLogs = async (req, res) => {
                 { subject: { $regex: search, $options: 'i' } }
             ]
         })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: 1 })
             .skip(skip)
             .limit(pageSize)
             .lean();
@@ -518,7 +518,7 @@ export const AgentDetails = async (req, res) => {
 
         // Total count for pagination metadata
         const total = await user.countDocuments({
-            // status: 0,
+            delStatus: 0,
             isMainMA: 0,
             role: 'agent',
             ...(search && {
@@ -526,6 +526,7 @@ export const AgentDetails = async (req, res) => {
                     { lname: { $regex: search, $options: 'i' } },
                     { fname: { $regex: search, $options: 'i' } },
                     { email: { $regex: search, $options: 'i' } },
+                    { companyname: { $regex: search, $options: 'i' } },
                 ],
             }),
         });

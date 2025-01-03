@@ -20,7 +20,7 @@ function verifyJWT(req, res, next) {
             if (userId == decode.id) {
                 next()
             } else {
-                return res.status(500).send({ message: "Token not Appropriate" })
+                return res.status(409).send({ message: "Token not Appropriate" })
             }
         } else {
             return res.status(409).send({ message: "Token not Available" })

@@ -1,6 +1,11 @@
 
-import bcrypt from 'bcryptjs'
+import bcrypt from 'bcryptjs';
 import mongoose, { Mongoose } from 'mongoose';
+import Staff from '../DB/Schema/StaffSchema.js';
+import user from '../DB/Schema/userSchema.js';
+import Property from '../DB/Schema/PropertySchema.js';
+import logUserAction from './ActivityController.js';
+
 
 export const AddNewStaff = async (req, res) => {
     const { coruspondingEmail,_id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
@@ -21,7 +26,7 @@ export const AddNewStaff = async (req, res) => {
         password,
         Property_per,
     };
-
+    
     if (password) {
         staffData.password = await bcrypt.hash(password, 10);
     }
@@ -117,7 +122,7 @@ export const AddNewStaff = async (req, res) => {
             res.status(201).json({ message: 'Staff added successfully', severity: 'sucsess', success: true });
         }
     } catch (error) {
-        console.log(error);
+       
         
         if (error.name === 'ValidationError') {
             return res.status(400).json({ message: 'Validation error', errors: error.errors, severity: 'error', success: false });
@@ -191,6 +196,8 @@ export const ListStaff = async (req, res) => {
             });
         }
     } catch (error) {
+      
+        
         res.status(500).json({ success: false, message: 'Server Error', severity: 'error' });
     }
 }

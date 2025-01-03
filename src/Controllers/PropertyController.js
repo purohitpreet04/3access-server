@@ -334,7 +334,7 @@ export const CheckRoomAvebility = async (req, res) => {
         let isRoomOccupied = property.tenants.some(
             (tenant) => tenant.roomNo === parseInt(room, 10)
         );
-        let rooms = Array.from({ length: property.bedrooms }, (_, i) => i + 1); // Create an array of room numbers
+        let rooms = Array.from({ length: property.bedrooms }, (_, i) => i + 1);
         isRoomOccupied = false;
         if (property.tenants.length == 0) {
             return res.status(200).json({
@@ -350,9 +350,9 @@ export const CheckRoomAvebility = async (req, res) => {
                 const hasInvalidTenant = property.tenants.some((tenant) => tenant.roomNo === room && (!tenant.tenant_id && tenant?.lastsignoutdate));
                 if (isRoomUnoccupied || hasInvalidTenant) {
                     unOccupiedRooms.add(room);
+                    
                 }
             });
-
             const roomArray = Array.from(unOccupiedRooms);
             return res.send({
                 success: true,
