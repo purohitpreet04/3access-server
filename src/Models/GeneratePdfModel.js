@@ -4,11 +4,11 @@ import Property from "../DB/Schema/PropertySchema.js";
 import user from "../DB/Schema/userSchema.js";
 import RSL from "../DB/Schema/RSLSchema.js";
 
-export const GeneratePdf = async (type, id, data) => {
+export const GeneratePdf = async (type, id, data, assessment_id) => {
     let browser = null;
     return new Promise(async (resolve, reject) => {
         try {
-            const htmlContent = await getDynemicPdf(type, id, true, data) || '<p>No content available</p>';
+            const htmlContent = await getDynemicPdf(type, id, true, data, assessment_id) || '<p>No content available</p>';
             const browser = await puppeteer.launch({
                 headless: 'new',
                 args: [

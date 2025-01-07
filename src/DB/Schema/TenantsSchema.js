@@ -1,7 +1,35 @@
 import mongoose, { Schema, model } from 'mongoose';
 import { type } from 'os';
 
-
+const riskCategorySchema = new mongoose.Schema({
+    name: {
+      type: String,
+      required: true,
+    },
+    isChecked: {
+      type: Boolean,
+      default: false, // Checkbox status (true = checked, false = unchecked)
+    },
+    whoIsAtRisk: {
+      type: String,
+      required: function () {
+        return this.isChecked; // Only required if the category is checked
+      },
+    },
+    riskManagement: {
+      type: String,
+      required: function () {
+        return this.isChecked; // Only required if the category is checked
+      },
+    },
+    riskRating: {
+      type: String,
+      enum: ['High', 'Medium', 'Low'],
+      required: function () {
+        return this.isChecked; // Only required if the category is checked
+      },
+    },
+});
 
 const AssessmentSchema = new Schema({
     supportWorkerSignature: { type: String, default: '' },
@@ -9,8 +37,11 @@ const AssessmentSchema = new Schema({
     subjecttoorder: { type: String, default: '' },
     supportNeeds: [String],
     homeNo: { type: Boolean, default: false },
+    homeNoDetails:{type:String,default:''},
     workNo: { type: Boolean, default: false },
+    workNoDetails:{type:String,default:''},
     communicationNeeds: { type: Boolean, default: false },
+    communicationNeedsDetails:{type:String,default:''},
     dateOfAssessment: { type: Date },
     debt: { type: Boolean, default: false },
     debts: { type: Boolean, default: false },
@@ -25,6 +56,10 @@ const AssessmentSchema = new Schema({
     drug: { type: Boolean, default: false },
     isotherRisk: { type: Boolean, default: false },
     mentalHealthdig: { type: Boolean, default: false },
+    diagnosed_any_mental_health_name_person: { type: String, default: '' },
+    diagnosed_any_mental_health_prescribed: { type: String, default: '' },
+    diagnosed_any_mental_health_dosage: { type: String, default: '' },
+    diagnosed_any_mental_health_medication: { type: String, default: '' },
     related_under_condition: { type: Boolean, default: false },
     records: [
         {
@@ -104,14 +139,15 @@ const AssessmentSchema = new Schema({
     developLivingSkills: { type: String, default: '' },
     maintainAccommodation: { type: String, default: '' },
     minimizeRiskOfHarm: { type: String, default: '' },
-    violenceAggression: { type: Boolean, default: false },
-    knownAssociates: { type: Boolean, default: false },
-    hazardsFromOthers: { type: Boolean, default: false },
     otherRisk: { type: String, default: '' },
     interim_risk_review_details: { type: String, default: '' },
     family_support_level: { type: String, default: '' },
     family_support_why: { type: String, default: '' },
     nextAssessmentDate: { type: Date },
+    categories: [riskCategorySchema],
+    // violenceAggression: { type: Boolean, default: false },
+    // knownAssociates: { type: Boolean, default: false },
+    // hazardsFromOthers: { type: Boolean, default: false },
 })
 
 const TenantSchema = new Schema({
@@ -308,7 +344,10 @@ const TenantSchema = new Schema({
         },
     },
     status: { type: Number, default: 0 },
-    assesment: [AssessmentSchema]
+    assesment: {
+        type: [AssessmentSchema],
+        default: []
+      }
 }, {
     timestamps: true
 });

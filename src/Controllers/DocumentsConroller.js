@@ -6,14 +6,14 @@ import { getPreSignedUrl } from "../Utils/s3Config.js";
 
 export const getdocument = async (req, res) => {
     try {
-        const { type, id } = req.query;
+        const { type, id, assessment_id } = req.query;
 
-        const htmlContent = await getDynemicPdf(type, id) || ''
+        const htmlContent = await getDynemicPdf(type, id, false, {}, assessment_id) || ''
         // let html = addFooterToHTML(htmlContent.html, htmlContent.logo);
         // let bhtml = addBorderAndSpacingToHTML(htmlContent.html, htmlContent.logo);
         res.send(htmlContent.html)
     } catch (error) {
-        // console.log(error)
+        console.log(error)
         return res.status(500).json({
             success: false,
             message: 'Failed to fetch tenant details',

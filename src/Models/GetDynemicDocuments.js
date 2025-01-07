@@ -6,13 +6,16 @@ import Staff from "../DB/Schema/StaffSchema.js"
 import Tenants from "../DB/Schema/TenantsSchema.js";
 import { generateHtmlforPdf, getDate, replacePlaceholders } from "../Utils/CommonFunctions.js";
 import { getPreSignedUrl } from "../Utils/s3Config.js";
+import { RiskAssessmentTemplate } from "../Utils/Document.js";
+import mongoose, { isValidObjectId } from "mongoose";
 
-export const getDynemicPdf = async (tempid, id, pdf, otherData) => {
+export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) => {
 
 
-    let userdata;
-    const html = await Template.findOne({ _id: tempid }).lean()
+    let userdata = {};
     let pdfTemp
+
+
 
     const data = await Tenants.findById(id)
         .populate({
@@ -24,25 +27,68 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData) => {
                 select: 'companyname address area city rslLogo pincode addedBy',
             }
         })
-        .populate('addedBy', 'fname lname email role username')
+        .populate('addedBy', 'fname lname email role username companyname')
         .populate({
             path: 'signOutper.byWhom',
             select: 'fname lname email role username',
         })
         .lean();
+    let riskCategoriesarray = []
+    let assesment_data;
+    if (data?.assesment.length > 0 && assessment_id) {
+        assesment_data = data?.assesment.filter((item) => item?._id == assessment_id)[0]
+
+        riskCategories.forEach((item) => {
+            const Catobj = assesment_data?.categories?.find((cat) => cat?.name === item?.name);
+
+            if (Catobj?.isChecked) {
+                riskCategoriesarray.push(item?.label)
+                // If the category is checked, populate the assessment data
+                assesment_data[item.name] = true;
+                assesment_data[item?.name + '_riskRating'] = Catobj?.riskRating || '';
+                assesment_data[item?.name + '_riskManagement'] = Catobj?.riskManagement || '';
+                assesment_data[item?.name + '_whoIsAtRisk'] = Catobj?.whoIsAtRisk || '';
+            } else {
+                // If the category is not checked, reset the values
+                assesment_data[item.name] = false;
+                assesment_data[item.name + '_riskRating'] = '';
+                assesment_data[item.name + '_riskManagement'] = '';
+                assesment_data[item.name + '_whoIsAtRisk'] = '';
+            }
+        });
+        let { categories, ...otherAssesData } = assesment_data
+        userdata = { ...otherAssesData }
+        // riskCategories.forEach(category => {
+        //     if (assesment_data[category?.name] === true) {
+        //         riskCategoriesarray.push(category?.label)
+        //     }
+        // })
+
+    }
+    userdata['risk_Identified'] = riskCategoriesarray.length !== 0 ? riskCategoriesarray.join(', ') : ''
+
+    // console.log(assesment_data);
+
+    // console.log(userdata?.risk_Identified);
+    console.log(riskCategoriesarray);
+
+    // data?.assesment.forEach((item) => console.log(item));
 
 
     let maDetails;
     if (['agent'].includes(data.addedBy?.role)) {
-        maDetails = `${data.addedBy?.fname} ${data.addedBy?.lname} (${data.addedBy?.role})`
+        maDetails = `${data.addedBy?.companyname}`
     } else {
         let staff = Staff.find({ _id: data.addedBy?._id }).populate('addedBy', 'fname lname email role').lean()
-        maDetails = `${staff.addedBy?.fname} ${staff.addedBy?.lname} (${staff.addedBy?.role})`
+        maDetails = `${staff.addedBy?.companyname}`
     }
+    // console.log(otherAssesData);
 
     userdata = {
+        ...userdata,
+        // ...otherAssesData,
         ...otherData,
-        maname:maDetails,
+        maname: maDetails,
         other_charges_of_tenant: data?.other_charges_of_tenant || '',
         title_before_name: data?.title_before_name || '',
         middleName: data?.middleName || '',
@@ -94,25 +140,27 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData) => {
         pro_bedrooms: data?.property?.bedrooms || 0,
         two_weeksserviceCharge: data?.property?.serviceCharges * 2 || 0,
         basicRent: data?.property?.basicRent || 0,
-        isPresent:data?.isPresent
-    };
+        isPresent: data?.isPresent,
 
+        // ...assesment_data,
+    };
+    // console.log(userdata.ineligibleCharge)
+    // console.log(typeof MonJan06202500:00:00GMT+0530);
     try {
 
-        let riskCategoriesarray = []
-        riskCategories.forEach(category => {
-            if (data?.assesment[category?.name] === true) {
-                riskCategoriesarray.push(category?.label)
-            }
-        })
-        userdata['risk_Identified'] = riskCategoriesarray.join(', ')
+
         Object.keys(userdata).forEach(key => {
             if (typeof userdata[key] === 'boolean') {
                 userdata[key] = userdata[key] ? 'Yes' : 'No'
             }
             if (typeof userdata[key] === 'string') {
-                userdata[key] = userdata[key] || ''
+                userdata[key] =  userdata[key] !== ('' || null) ? userdata[key] : ''
             }
+           
+            if (userdata[key] instanceof Date) {
+                userdata[key] = getDate(userdata[key])
+            }
+
             userdata[key] = userdata[key]
         })
         if (data?.assesment) {
@@ -128,9 +176,7 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData) => {
         for (let { key } of tenatsignImageArray) {
             userdata[key] = data[key]
         }
-        if (data[html?.key]) {
-            userdata['tenantSignature'] = data[html?.key]
-        }
+
 
 
         let logo
@@ -149,22 +195,56 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData) => {
                 }
             }
         }
-        if (!pdf) {
-            pdfTemp = await replacePlaceholders(html?.body, userdata)
-            let body = { html: pdfTemp, logo }
-            return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+
+        let html
+        if (mongoose.isObjectIdOrHexString(tempid)) {
+            //with query
+            html = await Template.findOne({ _id: tempid }).lean()
+            if (data[html?.key]) {
+                userdata['tenantSignature'] = data[html?.key]
+            }
+            if (!pdf) {
+                pdfTemp = await replacePlaceholders(html?.body, userdata)
+                let body = { html: pdfTemp, logo }
+                return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+            } else {
+                let pdfhtmlTemp = await generateHtmlforPdf(html?.body, userdata)
+                return { html: pdfhtmlTemp, logo, name: html?.name }
+            }
         } else {
-            // pdfTemp = await replacePlaceholders(html?.body, userdata)
-            // let body = { html: pdfTemp, logo }
-            // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
-            // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
-            let pdfhtmlTemp = await generateHtmlforPdf(html?.body, userdata)
-            return { html: pdfhtmlTemp, logo, name: html?.name }
+            // with out query from local file
+            let local_html
+            if (['RiskAssessment'].includes(tempid)) {
+                await RiskAssessmentTemplate(data).then((res) => {
+                    local_html = res
+                }).catch(err => console.log('error in RiskAssessment html'))
+                // return { html: addBorderAndSpacingToHTML(html, logo), logo }
+            }
+
+            if (!pdf) {
+
+                pdfTemp = await replacePlaceholders(local_html, userdata);
+                let body = { html: pdfTemp, logo };
+                return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo };
+
+            } else {
+                let pdfhtmlTemp = await generateHtmlforPdf(local_html, userdata)
+                return { html: pdfhtmlTemp, logo }
+            }
         }
 
-    } catch (error) {
+        // if (!pdf) {
+        // let body = { html: pdfTemp, logo }
+        // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+        // } else {
+        // pdfTemp = await replacePlaceholders(html?.body, userdata)
+        // let body = { html: pdfTemp, logo }
+        // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+        // return { html: addBorderAndSpacingToHTML(body.html, body.logo), logo }
+        // }
 
-        console.log('error in getDynemicPdf')
+    } catch (error) {
+        console.log('error in getDynemicPdf', error)
     }
 
 }

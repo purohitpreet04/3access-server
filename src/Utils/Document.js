@@ -1,3 +1,4 @@
+import { riskCategories } from "../../test.js";
 import { getDate } from "./CommonFunctions.js";
 
 const DocumentTemplate = (type, user) => {
@@ -2099,7 +2100,7 @@ Personal hygiene issues</p>
     <p>&nbsp;</p>
     <p>Date : ${getDate(user?.signInDate)}<b></b></p>
 </div></div>`,
-tenant_photographic_id_consent_form:`
+        tenant_photographic_id_consent_form: `
 <div style="margin-top: 52px!important; width: 700px;margin: auto;padding: 25px;border: 1px solid black;">
     <div style="font-family: calibri;">
         <h3 style="text-align:center">
@@ -2301,3 +2302,369 @@ tenant_photographic_id_consent_form:`
 };
 
 export default DocumentTemplate;
+
+export const RiskAssessmentTemplate = (data) => {
+    // let tepmatesObj = { RiskAssessment: '' };
+    return new Promise(async (res, rej) => {
+
+        try {
+
+            let tableRows = '';
+            for (let i = 0; i < riskCategories.length; i += 2) {
+                const firstCategory = riskCategories[i];
+                const secondCategory = riskCategories[i + 1] || { label: "", name: "" }; // Handle odd number of items
+
+                tableRows += `
+        <tr>
+            <td style="background: #bfbfbf; border-color: #000000;" valign="top" width="397">
+                <p class="MsoNormal"><span lang="EN-GB">${firstCategory.label}</span></p>
+            </td>
+            <td style="border-color: #000000;" valign="top" width="66">
+                <p class="MsoNormal"><span lang="EN-GB">&nbsp;{{${firstCategory?.name}}}</span></p>
+            </td>
+            <td style="background: #bfbfbf; border-color: #000000;" valign="top" width="397">
+                <p class="MsoNormal"><span lang="EN-GB">${secondCategory.label}</span></p>
+            </td>
+            <td style="border-color: #000000;" valign="top" width="66">
+                <p class="MsoNormal"><span lang="EN-GB">&nbsp;{{${secondCategory.name}}}</span></p>
+            </td>
+        </tr>
+    `;
+            }
+
+            let riskRows = ''
+            for (let i = 0; i < riskCategories.length; i++) {
+
+
+                riskRows += `
+                    <tr>
+                        <td valign="top" width="232">
+                            <p class="MsoNormal">
+                            <span lang="EN-GB">
+                            ${riskCategories?.[i]?.label}
+                            </span>
+                            </p>
+                          
+                        </td>
+                        <td valign="top" width="136">
+                            <p class="MsoNormal"><span lang="EN-GB">
+                           {{${riskCategories?.[i]?.name + '_whoIsAtRisk'}}}
+                            </span></p>
+                        </td>
+                        <td valign="top" width="435">
+                        <p class="MsoNormal"><span lang="EN-GB">
+                        {{${riskCategories?.[i]?.name + '_riskManagement'}}}
+                        </span></p>
+                        </td>
+                        <td valign="top" width="127">
+                        <p class="MsoNormal"><span lang="EN-GB">
+                        {{${riskCategories?.[i]?.name + '_riskRating'}}}
+                        </span></p>
+                        </td>
+                    </tr>
+                   `
+            }
+            let riskReviewRows = ''
+
+            for (let i = 0; i <= data?.assesment.length; i++) {
+                riskReviewRows += `<tr>
+<td valign="top" width="220">
+<p class="MsoNormal"><span lang="EN-GB">{{dateOfAssessment}}</span></p>
+</td>
+<td valign="top" width="230">
+<p class="MsoNormal"><span lang="EN-GB">{{supportWorkerSignature}}</span></p>
+</td>
+<td valign="top" width="242">
+<p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+</td>
+<td valign="top" width="238">
+<p class="MsoNormal"><span lang="EN-GB">{{currentAssessmentDate}}</span></p>
+</td>
+</tr>`
+            }
+
+
+
+
+
+            let template = `
+    <h2 class="MsoNormal" style="text-align: center;">
+        <span lang="EN-GB" style="line-height: 107%;">Risk Assessment</span>
+    </h2>
+    <h5 class="MsoNormal" style="text-align: center;">
+        <span lang="EN-GB">Please tick below where risk may be presented&nbsp;</span>
+    </h5>
+    <table style="width: 100%; border-collapse: collapse; border-width: 1px; border-spacing: 0px; border-color: #000000;" border="1" cellspacing="0" cellpadding="0">
+        <tbody>
+            ${tableRows}
+        </tbody>
+    </table>
+    <p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+<p class="MsoNormal"><span lang="EN-GB">Below please detail all identified risks and complete all sections &ndash; </span></p>
+
+<table style="width: 100%;" border="1" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td style="background: #BFBFBF;" valign="top" width="232">
+<p class="MsoNormal"><span lang="EN-GB">Details of identified risk</span></p>
+<p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+</td>
+<td style="background: #BFBFBF;" valign="top" width="136">
+<p class="MsoNormal"><span lang="EN-GB">Who is at risk?</span></p>
+</td>
+<td style="background: #BFBFBF;" valign="top" width="435">
+<p class="MsoNormal"><span lang="EN-GB">How will the risk be managed</span></p>
+</td>
+<td style="background: #BFBFBF;" valign="top" width="127">
+<p class="MsoNormal"><span lang="EN-GB">Risk rating &ndash; high/medium/low</span></p>
+</td>
+</tr>
+        ${riskRows}
+</tbody>
+</table>
+ <p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+
+</table>
+<h5 class="MsoNormal" style="text-align: center;">&nbsp;</h5>
+<p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+
+<table style="width: 100%; border-collapse: collapse; border-width: 1px; border-spacing: 0px; border-color: #000000;" border="1" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td style="background: #d9d9d9; border-color: #000000;" valign="top" width="212">
+<p class="MsoNormal"><strong><span lang="EN-GB">Signed (Staff)</span></strong></p>
+</td>
+<td style="border-color: #000000;" valign="top" width="717">
+<p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;&nbsp;{{staffSignature}}&nbsp;</span></strong></p>
+</td>
+</tr>
+<tr>
+<td style="background: #d9d9d9; border-color: #000000;" valign="top" width="212">
+<p class="MsoNormal"><strong><span lang="EN-GB">Signed (Service User)</span></strong></p>
+</td>
+<td style="border-color: #000000;" valign="top" width="717">
+<p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;&nbsp;{{supportWorkerSignature}}&nbsp;</span></strong></p>
+</td>
+</tr>
+<tr>
+<td style="background: #d9d9d9; border-color: #000000;" valign="top" width="212">
+<p class="MsoNormal"><strong><span lang="EN-GB">Print</span></strong></p>
+</td>
+<td style="border-color: #000000;" valign="top" width="717">
+<p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;&nbsp;{{title_before_name}} &nbsp;{{firstName}} &nbsp;{{middleName}} &nbsp;{{lastName}}&nbsp;</span></strong></p>
+</td>
+</tr>
+<tr>
+<td style="background: #d9d9d9; border-color: #000000;" valign="top" width="212">
+<p class="MsoNormal"><strong><span lang="EN-GB">Date</span></strong></p>
+</td>
+
+<td style="border-color: #000000;" valign="top" width="717">
+<p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;&nbsp;{{signInDate}}&nbsp;</span></strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+ <p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+
+<table style="width: 100%;" border="1" cellspacing="0" cellpadding="0" align="left">
+<tbody>
+<tr>
+<td valign="top" width="220">
+<p class="MsoNormal"><strong><span lang="EN-GB">Date</span></strong></p>
+</td>
+<td valign="top" width="230">
+<p class="MsoNormal"><strong><span lang="EN-GB">Support Worker Signature</span></strong></p>
+</td>
+<td valign="top" width="242">
+<p class="MsoNormal"><strong><span lang="EN-GB">Service User Signature</span></strong></p>
+</td>
+<td valign="top" width="238">
+<p class="MsoNormal"><strong><span lang="EN-GB">Review Date</span></strong></p>
+</td>
+</tr>
+        ${riskReviewRows}
+</tbody>
+</table>
+<p class="MsoNormal"><span lang="EN-GB">&nbsp;</span></p>
+`;
+
+            res(template);
+        } catch (error) {
+            rej('')
+        } finally {
+            res('')
+        }
+    })
+
+}
+
+export const YourRiskAssessment = () => {
+    return new Promise((res, rej) => {
+        try {
+            let template = `
+            <div class="WordSection1">
+            <p class="MsoTitle" style="margin-left: 0cm; text-align: left;" align="left"><span
+            style="text-decoration: none;">&nbsp;</span></p>
+    <p class="MsoTitle" style="text-align: center;" align="left"><span style="font-size: 18pt;"><strong><span
+                    lang="EN-US">Your<span style="letter-spacing: .5pt;"> </span>Risk<span
+                        style="letter-spacing: .8pt;"> </span>Assessment WR-9</span></strong></span></p>
+    <p class="MsoBodyText">&nbsp;</p>
+<table class="MsoNormalTable" style="margin-left: 6.05pt; border-collapse: collapse; border: none; width: 65.1536%;" border="1" cellspacing="0" cellpadding="0">
+<tbody>
+ <tr style="mso-yfti-irow: 0; mso-yfti-firstrow: yes; height: 43.5pt;">
+                <td style="width: 27.9194%; border: 1pt solid black; background: #f1f1f1; padding: 0cm; height: 43.5pt;"
+                    valign="top" width="171">
+                    <p class="TableParagraph"
+                        style="margin-left: 6.35pt; line-height: 14.45pt; mso-line-height-rule: exactly;"><strong
+                            style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                                style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; color: black; mso-color-alt: windowtext;">Name<span
+                                    style="letter-spacing: -.25pt;"> </span>of<span style="letter-spacing: -.15pt;">
+                                </span><span style="letter-spacing: -.1pt;">Resident</span></span></strong></p>
+                </td>
+                <td style="width: 72.0908%; border-top: 1pt solid black; border-right: 1pt solid black; border-bottom: 1pt solid black; border-image: initial; border-left: none; padding: 0cm; height: 43.5pt;"
+                    valign="top" width="434">
+                    <p class="TableParagraph"><span lang="EN-US"
+                            style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; font-family: 'Times New Roman',serif; mso-hansi-font-family: Calibri; mso-bidi-font-family: Calibri;">&nbsp;<strong
+                                style="mso-bidi-font-weight: normal;"><span lang="EN-GB"
+                                    style="mso-bidi-font-family: Arial;">{{title_before_name}} {{firstName}}
+                                    {middleName}} &nbsp;{{lastName}} </span></strong></span></p>
+                </td>
+            </tr>
+
+             <tr style="mso-yfti-irow: 1; mso-yfti-lastrow: yes; height: 38.25pt;">
+                <td style="width: 27.9194%; border-right: 1pt solid black; border-bottom: 1pt solid black; border-left: 1pt solid black; border-image: initial; border-top: none; background: #f1f1f1; padding: 0cm; height: 38.25pt;"
+                    valign="top" width="171">
+                    <p class="TableParagraph" style="margin: .6pt 0cm .0001pt 6.35pt;"><strong
+                            style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                                style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; color: black; mso-color-alt: windowtext; letter-spacing: -.1pt;">Address</span></strong>
+                    </p>
+                </td>
+                <td style="width: 72.0908%; border-top: none; border-left: none; border-bottom: 1pt solid black; border-right: 1pt solid black; padding: 0cm; height: 38.25pt;"
+                    valign="top" width="434">
+                    <p class="TableParagraph"><span lang="EN-US"
+                            style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; font-family: 'Times New Roman',serif; mso-hansi-font-family: Calibri; mso-bidi-font-family: Calibri;">&nbsp;<span
+                                lang="EN-GB" style="font-size: 12.0pt;">&nbsp;{{pro_address}} &nbsp;{{pro_area}}
+                                &nbsp;{{pro_city}} &nbsp;{{pro_postCode}}&nbsp;</span></span></p>
+                </td>
+            </tr>
+</tbody>
+</table>
+           <p class="MsoBodyText"><strong style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                style="font-size: 10.0pt; mso-bidi-font-size: 12.0pt;">&nbsp;</span></strong></p>
+    <p class="MsoBodyText" style="margin-top: .3pt;"><strong style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                style="font-size: 9.5pt; mso-bidi-font-size: 12.0pt;">&nbsp;</span></strong></p>
+                <table class="MsoNormalTable"
+        style="margin-left: 6.05pt; border-collapse: collapse; mso-table-layout-alt: fixed; border: none; mso-border-alt: solid black .75pt; mso-yfti-tbllook: 480; mso-padding-alt: 0cm 0cm 0cm 0cm; mso-border-insideh: .75pt solid black; mso-border-insidev: .75pt solid black;"
+        border="1" cellspacing="0" cellpadding="0">
+ <tbody>
+            <tr style="mso-yfti-irow: 0; mso-yfti-firstrow: yes; height: 36.75pt;">
+                <td style="width: 127.65pt; border: solid black 1.0pt; mso-border-alt: solid black .75pt; background: #F1F1F1; padding: 0cm 0cm 0cm 0cm; height: 36.75pt;"
+                    valign="top" width="170">
+                    <p class="TableParagraph" style="margin-left: 6.35pt; line-height: 102%;"><strong
+                            style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                                style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; line-height: 102%; color: black; mso-color-alt: windowtext;">Name<span
+                                    style="letter-spacing: -.2pt;"> </span>of<span style="letter-spacing: -.25pt;">
+                                </span>Support <span style="letter-spacing: -.1pt;">Worker</span></span></strong></p>
+                </td>
+                <td style="width: 323.65pt; border: solid black 1.0pt; border-left: none; mso-border-left-alt: solid black .75pt; mso-border-alt: solid black .75pt; padding: 0cm 0cm 0cm 0cm; height: 36.75pt;"
+                    valign="top" width="432">
+                    <p class="TableParagraph"><span lang="EN-US"
+                            style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; font-family: 'Times New Roman',serif; mso-hansi-font-family: Calibri; mso-bidi-font-family: Calibri;">&nbsp;</span>
+                    </p>
+                </td>
+            </tr>
+            <tr style="mso-yfti-irow: 1; height: 34.5pt;">
+                <td style="width: 127.65pt; border: solid black 1.0pt; border-top: none; mso-border-top-alt: solid black .75pt; mso-border-alt: solid black .75pt; background: #F1F1F1; padding: 0cm 0cm 0cm 0cm; height: 34.5pt;"
+                    valign="top" width="170">
+                    <p class="TableParagraph"
+                        style="margin-left: 6.35pt; line-height: 14.45pt; mso-line-height-rule: exactly;"><strong
+                            style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                                style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; color: black; mso-color-alt: windowtext;">Telephone<span
+                                    style="letter-spacing: .55pt;"> </span><span
+                                    style="letter-spacing: -.1pt;">Number</span></span></strong></p>
+                </td>
+                <td style="width: 323.65pt; border-top: none; border-left: none; border-bottom: solid black 1.0pt; border-right: solid black 1.0pt; mso-border-top-alt: solid black .75pt; mso-border-left-alt: solid black .75pt; mso-border-alt: solid black .75pt; padding: 0cm 0cm 0cm 0cm; height: 34.5pt;"
+                    valign="top" width="432">
+                    <p class="TableParagraph"><span lang="EN-US"
+                            style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; font-family: 'Times New Roman',serif; mso-hansi-font-family: Calibri; mso-bidi-font-family: Calibri;">&nbsp;&nbsp;{{tenantContactNumber}}&nbsp;</span>
+                    </p>
+                </td>
+            </tr>
+            <tr style="mso-yfti-irow: 2; mso-yfti-lastrow: yes; height: 37.5pt;">
+                <td style="width: 127.65pt; border: solid black 1.0pt; border-top: none; mso-border-top-alt: solid black .75pt; mso-border-alt: solid black .75pt; background: #F1F1F1; padding: 0cm 0cm 0cm 0cm; height: 37.5pt;"
+                    valign="top" width="170">
+                    <p class="TableParagraph"
+                        style="margin-left: 6.35pt; line-height: 14.5pt; mso-line-height-rule: exactly;"><strong
+                            style="mso-bidi-font-weight: normal;"><span lang="EN-US"
+                                style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; color: black; mso-color-alt: windowtext;">Email<span
+                                    style="letter-spacing: -.35pt;"> </span><span
+                                    style="letter-spacing: -.1pt;">address:</span></span></strong></p>
+                </td>
+                <td style="width: 323.65pt; border-top: none; border-left: none; border-bottom: solid black 1.0pt; border-right: solid black 1.0pt; mso-border-top-alt: solid black .75pt; mso-border-left-alt: solid black .75pt; mso-border-alt: solid black .75pt; padding: 0cm 0cm 0cm 0cm; height: 37.5pt;"
+                    valign="top" width="432">
+                    <p class="TableParagraph"><span lang="EN-US"
+                            style="font-size: 12.0pt; mso-bidi-font-size: 11.0pt; font-family: 'Times New Roman',serif; mso-hansi-font-family: Calibri; mso-bidi-font-family: Calibri;">&nbsp;&nbsp;{{tenantEmail}}&nbsp;</span>
+                    </p>
+                </td>
+            </tr>
+        </tbody>
+        </table>
+                
+
+
+            </div>
+            `
+            res(template);
+        } catch (error) {
+            rej('')
+        } finally {
+            res('')
+        }
+    })
+}
+
+
+// <table style="width: 100%;" border="1" cellspacing="0" cellpadding="0">
+// <tbody>
+// <tr>
+// <td style="background: #d9d9d9;" valign="top" width="212">
+// <p class="MsoNormal"><strong><span lang="EN-GB">Signed (Staff)</span></strong></p>
+// </td>
+// <td valign="top" width="717">
+// <p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;&nbsp;{{staffSignature}}&nbsp;</span></strong></p>
+// </td>
+// </tr>
+// <tr>
+// <td style="background: #d9d9d9;" valign="top" width="212">
+// <p class="MsoNormal"><strong><span lang="EN-GB">Signed (Service User)</span></strong></p>
+// </td>
+// <td valign="top" width="717">
+// <p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;</span></strong></p>
+// </td>
+// </tr>
+// <tr>
+// <td style="background: #d9d9d9;" valign="top" width="212">
+// <p class="MsoNormal"><strong><span lang="EN-GB">Print</span></strong></p>
+// </td>
+// <td valign="top" width="717">
+// <p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;</span></strong></p>
+// </td>
+// </tr>
+// <tr>
+// <td style="background: #d9d9d9;" valign="top" width="212">
+// <p class="MsoNormal"><strong><span lang="EN-GB">Date</span></strong></p>
+// </td>
+// <td valign="top" width="717">
+// <p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;&nbsp;{{signInDate}}&nbsp;</span></strong></p>
+// </td>
+// </tr>
+// <tr>
+// <td style="background: #d9d9d9;" valign="top" width="212">
+// <p class="MsoNormal"><strong><span lang="EN-GB">First review due</span></strong></p>
+// </td>
+// <td valign="top" width="717">
+// <p class="MsoNormal"><strong><span lang="EN-GB">&nbsp;</span></strong></p>
+// </td>
+// </tr>
+// </tbody>

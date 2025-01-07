@@ -29,7 +29,7 @@ export const getDate = (date, format = "DD-MM-YYYY") => {
 
   const parsedDate = moment(date, moment.ISO_8601, true);
   if (!parsedDate.isValid()) {
-    return ""; 
+    return "";
   }
 
   return parsedDate.format(format);
@@ -47,7 +47,7 @@ export const getDate = (date, format = "DD-MM-YYYY") => {
 // };
 
 // const formatDate = (date, format) => {
-  
+
 //   const day = String(date.getUTCDate()).padStart(2, "0");
 //   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
 //   const year = date.getUTCFullYear();
@@ -175,12 +175,12 @@ export async function replacePlaceholders(template, data) {
             };
           }
 
-          return { placeholder, replacement: placeholder };
+          return { placeholder, replacement: placeholder || ''  };
         }
 
         return key in data
-          ? { placeholder, replacement: data[key] }
-          : { placeholder, replacement: placeholder };
+          ? { placeholder, replacement: data[key] || '' }
+          : { placeholder, replacement: placeholder || '' };
       })
     );
 
@@ -217,21 +217,21 @@ export async function generateHtmlforPdf(template, data) {
               const fileType = response.headers['content-type'];
               base64img = `data:${fileType};base64,${base64Image}`;
             } catch (imageError) {
-              base64img = ''; // Fallback to empty string if image fetch fails
+              base64img = ''; 
             }
 
             return {
               placeholder,
               replacement: {
                 image: base64img,
-                width: 40, // Set the desired width
-                height: 20, // Set the desired height
-                alignment: 'center', // Optional: alignment of the image
-              },
+                width: 40, 
+                height: 20, 
+                alignment: 'center', 
+              } || '',
             };
           }
 
-          return { placeholder, replacement: placeholder };
+          return { placeholder, replacement: placeholder || '' };
         }
 
         return key in data

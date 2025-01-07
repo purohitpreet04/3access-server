@@ -230,17 +230,14 @@ export const GetEmailLogs = async (req, res) => {
 
 
 export const GeneratePdfController = async (req, res) => {
-
     try {
-        const { type, id } = req.query;
-        let pdfBuffer = await GeneratePdf(type, id)
+        const { type, id, assessment_id } = req.query;
+        let pdfBuffer = await GeneratePdf(type, id, {}, assessment_id);
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Length', pdfBuffer.length);
         res.setHeader('Content-Disposition', 'attachment; filename=document.pdf');
         return res.end(pdfBuffer);
-
     } catch (error) {
-
         res.status(500).json({
             success: false,
             message: 'Failed to generate pdf',
@@ -260,7 +257,7 @@ export const fetchUserDetails = async (req, response) => {
         if (['staff', 'company-staff'].includes(role)) {
             User = await Staff.findOne({ _id: new mongoose.Types.ObjectId(_id), status: 0 }, { password: 0 }).populate({ path: 'addedBy', select: '_id fname lname role email phonenumber' })
             if (!User) {
-              return  response.status(404).json({
+                return response.status(404).json({
                     success: false,
                     message: 'User Not found',
 
@@ -287,16 +284,16 @@ export const fetchUserDetails = async (req, response) => {
                 },
             }
         } else {
-            User = await user.findOne({ _id: new mongoose.Types.ObjectId(_id)}, { password: 0 }).lean()
-           
+            User = await user.findOne({ _id: new mongoose.Types.ObjectId(_id) }, { password: 0 }).lean()
+
             if (!User) {
-             return   response.status(404).json({
+                return response.status(404).json({
                     success: false,
                     message: 'User Not found',
 
                 });
             }
-           
+
             if (['agent'].includes(User?.role) && [0].includes(User?.status) && [0].includes(User?.isMainMA)) {
                 return response.status(401).send({ message: 'Access denied!', severity: 'error' });
             }

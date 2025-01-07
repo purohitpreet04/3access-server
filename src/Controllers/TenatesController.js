@@ -62,8 +62,8 @@ export const AddTenants = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'This Room Already Occupied', data: { fname: existingTenant.firstName, lname: existingTenant?.lastName, _id: existingTenant?._id } });
             }
 
-            for (let key in req.body) {
-                const value = req.body[key];
+            for (let key in data) {
+                const value = data[key];
 
                 if (typeof value === 'string' && value.startsWith('data:image/png;base64,')) {
                     try {
@@ -77,7 +77,7 @@ export const AddTenants = async (req, res) => {
                             ContentType: 'image/png', // MIME type of the image
                         }
                         await s3.send(new PutObjectCommand(params));
-                        req.body[key] = `uploads/signatures/${fileName}`
+                        data[key] = `uploads/signatures/${fileName}`
                     } catch (err) {
                         return res.status(500).json({ error: "Failed to process image" });
                     }
@@ -121,8 +121,17 @@ export const AddTenants = async (req, res) => {
                 replyTo: userData?.emailto,
                 to: userData?.emailto,
                 bcc: userData?.emailcc,
-                subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} ${newTenant?.middleName || ''} ${newTenant?.lastName || ''}, ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
-                html: EmailTempelates("new_tanant", { newTenant, address: rentproperty?.address, area: rentproperty?.area, city: rentproperty?.city, postCode: rentproperty?.postCode }),
+                subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} 
+                ${newTenant?.middleName || ''} ${newTenant?.lastName || ''},
+                ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
+                html: EmailTempelates("new_tanant",
+                    {
+                        newTenant,
+                        address: rentproperty?.address,
+                        area: rentproperty?.area,
+                        city: rentproperty?.city,
+                        postCode: rentproperty?.postCode
+                    }),
                 attachments: [...attachmentsArray],
             };
 
@@ -257,7 +266,7 @@ export const UpdateAssessment = async (req, res) => {
 
             await Tenants.updateOne(
                 { _id },
-                { $push: { assesment } } 
+                { $push: { assesment } }
             );
         }
 
@@ -672,14 +681,13 @@ export const signOutTenants = async (req, res, next) => {
 
         if (withOutMail === false) {
 
-            let pdfTemplets;
-            if (['6763a64fb4567a506762d235'].includes(updatedProperty?.rslTypeGroup)) {
-                pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: isPresent === true ? 'leaverform' : 'leaverform2' })
-            } else {
-                pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: 'leaverform' })
-            }
+            // if (['6763a64fb4567a506762d235'].includes(updatedProperty?.rslTypeGroup)) {
+            //     pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: isPresent === true ? 'leaverform' : 'leaverform2' })
+            // } else {
+            // }
 
-            // pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: 'leaverform' })
+            let pdfTemplets;
+            pdfTemplets = await Template.findOne({ rsl: new mongoose.Types.ObjectId(updatedProperty?.rslTypeGroup), key: 'leaverform' })
             const pdfBuffer = await GeneratePdf(pdfTemplets?._id, tenantId, {});
             let userData = {}
             if (['Staff'].includes(addedByModel)) {
@@ -728,7 +736,7 @@ export const signOutTenants = async (req, res, next) => {
         });
 
     } catch (error) {
-        
+
         return res.status(500).json({
             success: false,
             message: 'Failed to sign out tenant',
@@ -782,8 +790,86 @@ export const getTenantDetails = async (req, res) => {
         }
         let id = new mongoose.Types.ObjectId(_id)
         // const tenant = await Tenants.findById(_id).populate({path: 'property', select: 'city area address' }).lean();
+        // const tenant = await Tenants.aggregate([
+        //     { $match: { _id: id } },
+        //     { $unwind: { path: "$assesment", preserveNullAndEmptyArrays: true } },
+        //     // { $addFields: { assessment: { $ifNull: ["$assessment", []] } } },
+
+        //     {
+        //         $lookup: {
+        //             from: 'properties',
+        //             localField: 'property',
+        //             foreignField: '_id',
+        //             as: 'propertyDetails'
+        //         }
+        //     },
+        //     { $unwind: { path: "$propertyDetails", preserveNullAndEmptyArrays: true } },
+        //     {
+        //         $lookup: {
+        //             from: 'rsls',
+        //             localField: 'propertyDetails.rslTypeGroup',
+        //             foreignField: '_id',
+        //             as: 'companyDetails'
+        //         }
+        //     },
+        //     { $unwind: { path: "$companyDetails", preserveNullAndEmptyArrays: true } },
+        //     {
+        //         $addFields: {
+        //             assessment: { $ifNull: ["$assesment", []] }
+        //         }
+        //     },
+        //     {
+        //         $project: {
+
+        //             assessment: {
+        //                 $map: {
+        //                     input: "$assessment",
+        //                     as: "item",
+        //                     in: {
+        //                         _id: "$$item._id",
+        //                         nextAssessmentDate: "$$item.nextAssessmentDate",
+        //                         currentAssessmentDate: "$$item.currentAssessmentDate",
+        //                         dateOfAssessment: "$$item.dateOfAssessment"
+        //                     }
+        //                 }
+        //             },
+        //             title_before_name: 1,
+        //             middleName: 1,
+        //             lastName: 1,
+        //             firstName: 1,
+        //             nationalInsuranceNumber: 1,
+        //             dateOfBirth: 1,
+        //             claimReferenceNumber: "$claimReferenceNumber" === ('' || null || undefined) ? "No" : "$claimReferenceNumber",
+        //             gender: 1,
+        //             tenantContactNumber: 1,
+        //             tenantEmail: 1,
+        //             isSignOut: 1,
+        //             room: 1,
+        //             status: 1,
+        //             signInDate: 1,
+        //             rslDetails: {
+        //                 _id: '$companyDetails._id',
+        //                 rslname: '$companyDetails.companyname',
+        //                 address: '$companyDetails.address',
+        //                 area: '$companyDetails.area',
+        //                 city: '$companyDetails.city',
+        //             },
+        //             propertyDetails: {
+        //                 _id: '$propertyDetails._id',
+        //                 address: '$propertyDetails.address',
+        //                 city: '$propertyDetails.city',
+        //                 area: '$propertyDetails.area',
+        //                 eligibleRent: '$propertyDetails.eligibleRent',
+        //                 postCode: '$propertyDetails.postCode'
+        //             },
+
+        //         }
+        //     }
+        // ]);
         const tenant = await Tenants.aggregate([
             { $match: { _id: id } },
+            // { $unwind: { path: "$assesment", preserveNullAndEmptyArrays: true } },
+
             {
                 $lookup: {
                     from: 'properties',
@@ -801,20 +887,76 @@ export const getTenantDetails = async (req, res) => {
                     as: 'companyDetails'
                 }
             },
+            {
+                $lookup: {
+                    from: 'templates',
+                    localField: 'propertyDetails.rslTypeGroup',
+                    foreignField: 'rsl',
+                    as: 'rslTemplates'
+                }
+            },
             { $unwind: { path: "$companyDetails", preserveNullAndEmptyArrays: true } },
+            // { $unwind: { path: "$rslTemplates", preserveNullAndEmptyArrays: true } },
+
+            {
+                $addFields: {
+                    assesment: { $ifNull: ["$assesment", []] }
+                }
+            },
             {
                 $project: {
-                    assessment: [{
-                        _id: 1,
-                        
-                    }],
+                    rslTemplates: {
+                        $map: {
+                            input: "$rslTemplates",
+                            as: "item",
+                            in: {
+                                _id: "$$item._id",
+                                name: "$$item.name",
+                                key: '$$item.key'
+                            }
+                        }
+                    },
+                    assesment: {
+                        $map: {
+                            input: "$assesment",
+                            as: "item",
+                            in: {
+                                _id: "$$item._id",
+                                nextAssessmentDate: "$$item.nextAssessmentDate",
+                                currentAssessmentDate: "$$item.currentAssessmentDate",
+                                dateOfAssessment: "$$item.dateOfAssessment",
+                                temp: [{
+                                    _id: "$$item._id",
+                                    name: 'Risk Assessment',
+                                    key: 'RiskAssessment'
+                                },
+                                {
+                                    _id: "$$item._id",
+                                    name: 'Your Risk Assessment',
+                                    key: 'YourRiskAssessment'
+                                },
+                                {
+                                    _id: "$$item._id",
+                                    name: 'Initial Needs Assessment ',
+                                    key: 'initialriskassessment'
+                                }
+                                ]
+                            }
+                        }
+                    },
                     title_before_name: 1,
                     middleName: 1,
                     lastName: 1,
                     firstName: 1,
                     nationalInsuranceNumber: 1,
                     dateOfBirth: 1,
-                    claimReferenceNumber: "$claimReferenceNumber" === ('' || null || undefined) ? "No" : "$claimReferenceNumber",
+                    claimReferenceNumber: {
+                        $cond: {
+                            if: { $or: [{ $eq: ["$claimReferenceNumber", ""] }, { $eq: ["$claimReferenceNumber", null] }] },
+                            then: "No",
+                            else: "$claimReferenceNumber"
+                        }
+                    },
                     gender: 1,
                     tenantContactNumber: 1,
                     tenantEmail: 1,
@@ -827,7 +969,7 @@ export const getTenantDetails = async (req, res) => {
                         rslname: '$companyDetails.companyname',
                         address: '$companyDetails.address',
                         area: '$companyDetails.area',
-                        city: '$companyDetails.city',
+                        city: '$companyDetails.city'
                     },
                     propertyDetails: {
                         _id: '$propertyDetails._id',
@@ -836,7 +978,9 @@ export const getTenantDetails = async (req, res) => {
                         area: '$propertyDetails.area',
                         eligibleRent: '$propertyDetails.eligibleRent',
                         postCode: '$propertyDetails.postCode'
-                    }
+                    },
+
+
                 }
             }
         ]);
@@ -860,6 +1004,7 @@ export const getTenantDetails = async (req, res) => {
         });
 
     } catch (error) {
+
         return res.status(500).json({
             success: false,
             message: 'Failed to fetch tenant details',
@@ -917,7 +1062,7 @@ export const getAssessment = async (req, res) => {
             success: true,
             data: tenant,
         });
-    }   
+    }
     catch (error) {
         return res.status(500).json({
             success: false,
