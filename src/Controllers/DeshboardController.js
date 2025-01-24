@@ -47,11 +47,11 @@ export const GetallProperty = async (req, res) => {
             }
             query = {
                 visibleTo: { $in: _id },
-                status:0,
+                status: 0,
                 $or: [
                     // {visibleTo: { $in: _id }},
                     searchConditions,
-            
+
                     { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };
@@ -60,7 +60,11 @@ export const GetallProperty = async (req, res) => {
         }
 
         const properties = await Property.find(query)
-            .populate({ path: 'tenants.tenant_id', select: 'lastName firstName isSignOut claimReferenceNumber bedrooms signOutDate' })
+            .populate({
+                path: 'tenants.tenant_id',
+                select: 'lastName firstName isSignOut claimReferenceNumber bedrooms signOutDate',
+                match: { approved_status: 1, isSignOut: 0 }
+            })
             .populate({ path: 'addedBy', select: 'fname lname companyname role addedBy' })
             .populate({ path: 'rslTypeGroup', select: "companyname" })
             .skip((pageNumber - 1) * limitNumber)

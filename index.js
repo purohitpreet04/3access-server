@@ -16,13 +16,18 @@ import { initCronJobs } from "./src/Utils/CronJob.js";
 import { fileURLToPath } from "url";
 import rslRoutes from "./src/routes/RSLroutes.js";
 import { getDate } from "./src/Utils/CommonFunctions.js";
+import common from "./src/routes/CommonRoutes.js";
+import checkTenatStatus from "./src/Utils/CronJobFunction.js";
+// import { checkTenatStatus } from "./SelenimTest.js";
+
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
 
 config()
 const app = express()
 app.use(cors())
-app.use(express.json({limit:'50mb'}))
+app.use('/static', express.static(path.join(__dirname, 'Public')));
+app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static('uploads'));
 
@@ -33,12 +38,12 @@ app.use('/api/property', propertyroute)
 app.use('/api/tenents', tenents)
 app.use('/api/desh', deshrouter)
 app.use('/api/rsl', rslRoutes)
-
+app.use('/api', common)
 app.post('/api/upload', verifyJWT, uploadAndProcessFiles(), (req, res) => {
     const fileUrls = req.uploadedFiles.map(file => ({
         type: file.type,
         name: file.filename,
-        path: `/uploads/${file.type}/${file.filename}`
+        path: `/uploads/image/${file.filename}`
     }));
 
     res.json({
@@ -58,6 +63,9 @@ app.use((err, req, res, next) => {
 });
 initCronJobs()
 DbConnnection()
+
+// setTimeout(() => { checkTenatStatus() }, 3000)
+
 app.listen(process.env.PORT, () => {
     console.log('server is running...')
 })

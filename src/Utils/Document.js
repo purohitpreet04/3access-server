@@ -2304,11 +2304,8 @@ Personal hygiene issues</p>
 export default DocumentTemplate;
 
 export const RiskAssessmentTemplate = (data) => {
-    // let tepmatesObj = { RiskAssessment: '' };
     return new Promise(async (res, rej) => {
-
         try {
-
             let tableRows = '';
             for (let i = 0; i < riskCategories.length; i += 2) {
                 const firstCategory = riskCategories[i];
@@ -2334,8 +2331,6 @@ export const RiskAssessmentTemplate = (data) => {
 
             let riskRows = ''
             for (let i = 0; i < riskCategories.length; i++) {
-
-
                 riskRows += `
                     <tr>
                         <td valign="top" width="232">

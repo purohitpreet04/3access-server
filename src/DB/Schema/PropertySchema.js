@@ -14,7 +14,7 @@ const propertySchema = new mongoose.Schema({
     },
     councilTaxPayer: {
         type: Number,
-        required: true
+        // required: true
     },
     rslTypeGroup: {
         // type: String,
@@ -25,6 +25,10 @@ const propertySchema = new mongoose.Schema({
         type: String,
         required: true,
         maxlength: 100
+    },
+    fullAddress: {
+        type: String,
+        default:''
     },
     bedrooms: {
         type: Number,
@@ -60,7 +64,6 @@ const propertySchema = new mongoose.Schema({
     },
     sharedWithOther: {
         type: String,
-        enum: ['Yes', 'No'],
         required: true
     },
     otherInformation: {

@@ -98,6 +98,7 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    exsitingTenantFile: { type: String, default: '' }
 }, {
     timestamps: true,
 });

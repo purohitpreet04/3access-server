@@ -11,11 +11,8 @@ import mongoose, { isValidObjectId } from "mongoose";
 
 export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) => {
 
-
     let userdata = {};
     let pdfTemp
-
-
 
     const data = await Tenants.findById(id)
         .populate({
@@ -37,10 +34,8 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
     let assesment_data;
     if (data?.assesment.length > 0 && assessment_id) {
         assesment_data = data?.assesment.filter((item) => item?._id == assessment_id)[0]
-
         riskCategories.forEach((item) => {
             const Catobj = assesment_data?.categories?.find((cat) => cat?.name === item?.name);
-
             if (Catobj?.isChecked) {
                 riskCategoriesarray.push(item?.label)
                 // If the category is checked, populate the assessment data
@@ -56,25 +51,12 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
                 assesment_data[item.name + '_whoIsAtRisk'] = '';
             }
         });
+        
         let { categories, ...otherAssesData } = assesment_data
         userdata = { ...otherAssesData }
-        // riskCategories.forEach(category => {
-        //     if (assesment_data[category?.name] === true) {
-        //         riskCategoriesarray.push(category?.label)
-        //     }
-        // })
 
     }
     userdata['risk_Identified'] = riskCategoriesarray.length !== 0 ? riskCategoriesarray.join(', ') : ''
-
-    // console.log(assesment_data);
-
-    // console.log(userdata?.risk_Identified);
-    console.log(riskCategoriesarray);
-
-    // data?.assesment.forEach((item) => console.log(item));
-
-
     let maDetails;
     if (['agent'].includes(data.addedBy?.role)) {
         maDetails = `${data.addedBy?.companyname}`
@@ -82,8 +64,6 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
         let staff = Staff.find({ _id: data.addedBy?._id }).populate('addedBy', 'fname lname email role').lean()
         maDetails = `${staff.addedBy?.companyname}`
     }
-    // console.log(otherAssesData);
-
     userdata = {
         ...userdata,
         // ...otherAssesData,

@@ -28,10 +28,11 @@ const storage = multer.diskStorage({
     },
 });
 
-// Multer middleware for handling uploads
-const upload = multer({ storage: storage }).fields([
-    { name: 'image', maxCount: 10 }, // Maximum 10 images
-    { name: 'pdf', maxCount: 5 }, // Maximum 5 PDFs
+// Multer middleware for handling uploads 
+export const upload = multer({ storage: storage }).fields([
+    { name: 'image', maxCount: 10 }, 
+    { name: 'file', maxCount: 10 },
+    { name: 'pdf', maxCount: 5 },
 ]);
 
 
@@ -50,23 +51,24 @@ const uploadAndProcessFiles = (folder) => {
 
             try {
                 const uploadedFiles = [];
-                // Process uploaded images
                 if (req.files?.image) {
-                    
                     const imageUploads = req.files.image.map((file) => uploadImageToS3(file, 'image'));
                     const uploadedImages = await Promise.all(imageUploads);
                     uploadedFiles.push(...uploadedImages);
                 }
 
-                // Process uploaded PDFs
                 if (req.files?.pdf) {
-
                     const imageUploads = req.files.pdf.map((file) => uploadImageToS3(file, 'pdf'));
                     const uploadedImages = await Promise.all(imageUploads);
                     uploadedFiles.push(...uploadedImages);
                 }
 
-                // Pass uploaded files to the next middleware
+                if (req.files?.file) {
+                    const imageUploads = req.files.file.map((file) => uploadImageToS3(file, 'file'));
+                    const uploadedImages = await Promise.all(imageUploads);
+                    uploadedFiles.push(...uploadedImages);
+                }
+                
                 req.uploadedFiles = uploadedFiles;
                 next();
             } catch (error) {

@@ -1,14 +1,16 @@
 import { Builder, By, until } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js';
+import fs from 'fs'
+import moment from 'moment';
 
 async function CheckStatus(user) {
-    // Configure Chrome options
+
     return new Promise(async (res, rej) => {
         const options = new chrome.Options();
-        options.addArguments('--headless'); // Run browser in headless mode (no UI)
-        options.addArguments('--disable-gpu'); // Recommended for headless mode
-        options.addArguments('--no-sandbox'); // Useful in some environments
-        options.addArguments('--disable-dev-shm-usage'); // Prevent resource issues
+        options.addArguments('--headless');
+        options.addArguments('--disable-gpu');
+        options.addArguments('--no-sandbox');
+        options.addArguments('--disable-dev-shm-usage');
 
         const driver = new Builder()
             .forBrowser('chrome')
@@ -28,6 +30,7 @@ async function CheckStatus(user) {
                     await driver.executeScript("arguments[0].click();", linkElement);
                 }
             }
+
             await driver.wait(until.urlContains('f?p=NEBPWS:210'), 10000);
             let url = await driver.getCurrentUrl()
             await driver.get(url);
@@ -72,21 +75,49 @@ async function CheckStatus(user) {
                     throw error;
                 }
             }
+
             const pageSource = await driver.getPageSource();
             await driver.sleep(3000);
-            const isActive = pageSource.includes('<td headers="QUE_RESPONSE">Active</td>');
-            const isIneligible = pageSource.includes('<td headers="QUE_RESPONSE">Ineligible</td>');
-            // const amount = ''
-            let tdElement = await driver.findElement(By.css('td[headers="QUE_RESPONSE"]'));
-            let innerHTML = await tdElement.getAttribute('innerHTML');
-            let value = innerHTML.match(/&#xA3;\s*(\d+(\.\d+)?)/)[1];
+            try {
+                const errorInFetchingData = await driver.findElement(By.className('validation-summary'));
+                if (errorInFetchingData) {
+                    const errorList = await errorInFetchingData.findElements(By.tagName('li'));
+                    if (errorList.length > 0) {
+                        const errorMessages = [];
+                        for (const errorItem of errorList) {
+                            const errorMessage = await errorItem.getText();
+                            errorMessages.push(errorMessage);
+                        }
+                        return res({ error: errorMessages.toString(), status: 0, checked: 0 });
+                    } else {
+                        console.log('No error messages found within the validation-summary');
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'NoSuchElementError') {
+                    console.log('No validation-summary element found. Moving to table...');
+                } else {
+                    throw error; // Re-throw the error if it's not related to the missing element
+                }
+            }
+            const table = await driver.wait(until.elementLocated(By.id('R12666048653399214table')), 10000);
+            const rows = await table.findElements(By.css('tbody tr'));
+            const tableData = {};
+            for (let row of rows) {
+                const cells = await row.findElements(By.css('td'));
+                const key = await cells[0].getText();
+                const value = await cells[1].getText();
+                tableData[key] = value;
+            }
+            let userData = {}
+            userData['status'] = tableData?.Status === 'Active' ? 1 : 0
+            userData['Housing_benefit_weekly_amount'] = Number(tableData['Housing benefit weekly amount'].split(' ')[1])
+            userData['Next_HB_payment_amount'] = Number(tableData['Next HB payment amount'].split(' ')[1])
+            userData['Next_HB_payment_date'] = moment(tableData['Next HB payment date'], 'DD/MM/YYYY').toISOString()
 
-            // console.log(value);
-            res(isActive)
-
+            res({ ...userData, checked: 1 })
         } catch (error) {
             rej(error)
-            console.error('An error occurred in checking tenant status:', error);
         } finally {
             await driver.quit();
             console.log('Browser session ended.');
@@ -98,3 +129,9 @@ async function CheckStatus(user) {
 
 // Execute the scraper function
 export default CheckStatus;
+// const isActive = pageSource.includes('<td headers="QUE_RESPONSE">Active</td>');
+// const isIneligible = pageSource.includes('<td headers="QUE_RESPONSE">Ineligible</td>');
+// const amount = ''
+// let tdElement = await driver.findElement(By.css('td[headers="QUE_RESPONSE"]'));
+// let innerHTML = await tdElement.getAttribute('innerHTML');
+// let value = innerHTML.match(/&#xA3;\s*(\d+(\.\d+)?)/)[1];

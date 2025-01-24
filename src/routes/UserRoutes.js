@@ -1,13 +1,15 @@
 
 import { Router } from 'express';
-import { AddCompanies, getSelectedData, checkUserHasStaffOrAgent, AddEmail, getEmails, GetEmailLogs, GeneratePdfController, fetchUserDetails,  AgentDetails, hanndleAgentStatus } from '../Controllers/userConttroller.js';
+import { AddCompanies, getSelectedData, checkUserHasStaffOrAgent, AddEmail, getEmails, GetEmailLogs, GeneratePdfController, fetchUserDetails, AgentDetails, hanndleAgentStatus, handleExcelFileuload } from '../Controllers/userConttroller.js';
 import verifyJWT from '../Utils/MIddelware.js';
 import { getUserLogs } from '../Controllers/ActivityController.js';
+import { upload } from '../Utils/uploadimage.js';
 
 const userroute = Router();
 
 userroute.post('/addcompanies', verifyJWT, AddCompanies);
 userroute.post('/addemail', verifyJWT, AddEmail);
+userroute.post('/upload-Excel', verifyJWT, upload, handleExcelFileuload);
 userroute.get('/getSelectedData', verifyJWT, getSelectedData);
 userroute.get('/emails', verifyJWT, getEmails);
 userroute.get('/checkhasstaff', verifyJWT, checkUserHasStaffOrAgent);

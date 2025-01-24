@@ -4,6 +4,7 @@ import user from "../DB/Schema/userSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import logUserAction from "./ActivityController.js";
 import RSL from "../DB/Schema/RSLSchema.js";
+import Tenants from "../DB/Schema/TenantsSchema.js";
 
 export const AddnewProperty = async (req, res) => {
     try {
@@ -117,7 +118,7 @@ export const getAllProperty = async (req, res) => {
             }
             query = {
                 visibleTo: { $in: _id },
-                status: 0 ,
+                status: 0,
                 $or: [
                     // {visibleTo: { $in: _id }},
                     searchConditions,
@@ -294,9 +295,8 @@ export const getAllpropertyforTenants = async (req, res) => {
         const properties = await Property.find(query)
 
         const addresses = properties.map((pro) => {
-
             return (
-                { address: `${pro.address}, ${pro.area}, ${pro.city}`, _id: pro._id, rooms: pro.bedrooms }
+                { address: `${pro.address}, ${pro.area}, ${pro.city}`, _id: pro._id, rooms: pro.bedrooms, rsl:pro?.rslTypeGroup }
             )
         })
 
@@ -315,52 +315,67 @@ export const CheckRoomAvebility = async (req, res) => {
     try {
         const { property_id, room } = req.query;
 
-        if (!property_id) {
+        if (!property_id || !room) {
             return res.status(400).json({
-                message: 'Property ID and room number are required',
+                message: 'Property and Room number are required',
                 success: false,
             });
+        }
+        let isTenantExist;
+        isTenantExist = await Tenants.findOne({ property: property_id, room, approved_status: 1, isSignOut: 0 }).lean()
+        if (isTenantExist) {
+            const { firstName, lastName, title_before_name } = isTenantExist;
+            return res.send({
+                isOccupide: true,
+                success: true,
+                message: `${title_before_name} ${firstName} ${lastName} is Already present in this room. Please mention the move out date.`,
+            })
+        } else {
+            return res.send({
+                isOccupide: false,
+                success: true,
+                // message: `${title_before_name} ${firstName} ${lastName} is Already in this room, Are you sure You want to sign up this tenant?`,
+            })
         }
 
         // Fetch the property with tenants
-        const property = await Property.findById(property_id, { tenants: 1, bedrooms: 1 });
-        // console.log(property)
-        if (!property) {
-            return res.status(404).json({
-                message: 'Property not found',
-                success: false,
-            });
-        }
-        let isRoomOccupied = property.tenants.some(
-            (tenant) => tenant.roomNo === parseInt(room, 10)
-        );
-        let rooms = Array.from({ length: property.bedrooms }, (_, i) => i + 1);
-        isRoomOccupied = false;
-        if (property.tenants.length == 0) {
-            return res.status(200).json({
-                success: true,
-                rooms,
-                isRoomOccupied,
-                message: `All rooms are available`,
-            });
-        } else {
-            let unOccupiedRooms = new Set()
-            rooms.forEach((room) => {
-                const isRoomUnoccupied = !property.tenants.some((tenant) => tenant.roomNo === room);
-                const hasInvalidTenant = property.tenants.some((tenant) => tenant.roomNo === room && (!tenant.tenant_id && tenant?.lastsignoutdate));
-                if (isRoomUnoccupied || hasInvalidTenant) {
-                    unOccupiedRooms.add(room);
-                    
-                }
-            });
-            const roomArray = Array.from(unOccupiedRooms);
-            return res.send({
-                success: true,
-                rooms: roomArray.sort((a, b) => a - b),
-                isRoomOccupied,
-                message: `${roomArray.length} rooms are available`,
-            })
-        }
+        // const property = await Property.findById(property_id, { tenants: 1, bedrooms: 1 });
+        // if (!property) {
+        //     return res.status(404).json({
+        //         message: 'Property not found',
+        //         success: false,
+        //     });
+        // }
+        // let isRoomOccupied = property.tenants.some(
+        //     (tenant) => tenant.roomNo === parseInt(room, 10)
+        // );
+        // let rooms = Array.from({ length: property.bedrooms }, (_, i) => i + 1);
+        // isRoomOccupied = false;
+        // if (property.tenants.length == 0) {
+        //     return res.status(200).json({
+        //         success: true,
+        //         rooms,
+        //         isRoomOccupied,
+        //         message: `All rooms are available`,
+        //     });
+        // } else {
+        //     let unOccupiedRooms = new Set()
+        //     rooms.forEach((room) => {
+        //         const isRoomUnoccupied = !property.tenants.some((tenant) => tenant.roomNo === room);
+        //         const hasInvalidTenant = property.tenants.some((tenant) => tenant.roomNo === room && (!tenant.tenant_id && tenant?.lastsignoutdate));
+        //         if (isRoomUnoccupied || hasInvalidTenant) {
+        //             unOccupiedRooms.add(room);
+
+        //         }
+        //     });
+        //     const roomArray = Array.from(unOccupiedRooms);
+        //     return res.send({
+        //         success: true,
+        //         rooms: roomArray.sort((a, b) => a - b),
+        //         isRoomOccupied,
+        //         message: `${roomArray.length} rooms are available`,
+        //     })
+        // }
     } catch (error) {
         // console.error('Error checking room availability:', error);
         res.status(500).json({

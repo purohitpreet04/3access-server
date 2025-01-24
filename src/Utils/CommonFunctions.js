@@ -8,6 +8,8 @@ import { getPreSignedUrl } from './s3Config.js';
 import axios from 'axios';
 import sanitizeHtml from 'sanitize-html';
 import crypto from 'crypto';
+import { s3 } from './s3.js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 
 
 config()
@@ -175,7 +177,7 @@ export async function replacePlaceholders(template, data) {
             };
           }
 
-          return { placeholder, replacement: placeholder || ''  };
+          return { placeholder, replacement: placeholder || '' };
         }
 
         return key in data
@@ -217,16 +219,16 @@ export async function generateHtmlforPdf(template, data) {
               const fileType = response.headers['content-type'];
               base64img = `data:${fileType};base64,${base64Image}`;
             } catch (imageError) {
-              base64img = ''; 
+              base64img = '';
             }
 
             return {
               placeholder,
               replacement: {
                 image: base64img,
-                width: 40, 
-                height: 20, 
-                alignment: 'center', 
+                width: 40,
+                height: 20,
+                alignment: 'center',
               } || '',
             };
           }
@@ -325,3 +327,99 @@ export const generateVerificationToken = () => {
 export const isTokenExpired = (expiryDate) => {
   return new Date() > expiryDate;
 };
+
+
+export const UploaadBase64ToS3 = async (obj) => {
+
+  const ProccessObject = async (data) => {
+    for (let key in data) {
+      const value = data[key];
+
+      if (typeof value === 'object') {
+        data[key] = await ProccessObject(value)
+      } else if (typeof value === 'string' && value.startsWith('data:image/png;base64,')) {
+        try {
+          const [, format, base64Data] = value.match(/^data:image\/(\w+);base64,(.*)$/) || [];
+          const fileName = `${Date.now()}-${key}.png`;
+          const buffer = Buffer.from(base64Data, 'base64');
+          const params = {
+            Bucket: process.env.AWS_S3_BUCKET,
+            Key: `uploads/signatures/${fileName}`,
+            Body: buffer,
+            ContentType: 'image/png',
+          }
+          await s3.send(new PutObjectCommand(params));
+          data[key] = `uploads/signatures/${fileName}`
+        } catch (err) {
+          console.log('error in UploaadBase64ToS3', err);
+          return {}
+        }
+      } else {
+        data[key] = value
+      }
+    }
+    return data
+  }
+
+  return await ProccessObject({ ...obj });
+
+}
+
+
+export let property = [
+  "property",
+  "postCode",
+  "city",
+  "area",
+  "address",
+  "rslTypeGroup",
+  "Proeprty",
+  "bedrooms",
+  "basicRent",
+  "serviceCharges",
+  "eligibleRent",
+  "ineligibleCharge",
+  "sharedWithOther",
+  "fullAddress",
+  "addedByModel",
+  "addedByRole",
+  "addedBy"
+]
+
+export let tenant = [
+  "firstName",
+  "middleName",
+  "lastName",
+  "room",
+  "dateOfBirth",
+  "nationalInsuranceNumber",
+  "claimReferenceNumber",
+  "signInDate",
+  "signOutDate",
+  "addedByModel",
+  "addedByRole",
+  "addedBy"
+]
+
+export let replaceData = {
+  rslTypeGroup: "Rsl",
+  doornumber: "Door Number",
+  rodename: "Road Name",
+  area: "Area Name",
+  city: "City",
+  postCode: "Postcode",
+  bedrooms: "Number of Bedrooms in Property",
+  basicRent: "Basic Rent",
+  serviceCharges: "Service Charges",
+  eligibleRent: "eligible Rent",
+  ineligibleCharge: "weekly eligible Charge",
+  sharedWithOther: "Bedroom sharedWithOther",
+  firstName: "First Name",
+  middleName: "Middle Name",
+  lastName: "Surname",
+  room: "Room",
+  dateOfBirth: "Date of Birth",
+  nationalInsuranceNumber: "NINO",
+  claimReferenceNumber: "Claim Reference No",
+  signInDate: "Sign In Date"
+}

@@ -8,6 +8,7 @@ import RSL from "../DB/Schema/RSLSchema.js";
 import { getDynemicPdf } from "../Models/GetDynemicDocuments.js";
 import puppeteer from "puppeteer";
 import { GeneratePdf } from "../Models/GeneratePdfModel.js";
+import { getPreSignedUrl, uploadImageToS3 } from "../Utils/s3Config.js";
 
 
 export const AddCompanies = async (req, res) => {
@@ -202,10 +203,12 @@ export const GetEmailLogs = async (req, res) => {
                 { subject: { $regex: search, $options: 'i' } }
             ]
         })
-            .sort({ createdAt: 1 })
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(pageSize)
             .lean();
+
+
 
         const totalLogs = await EmailLog.countDocuments({ userId });
 
@@ -473,6 +476,7 @@ export const AgentDetails = async (req, res) => {
             },
             {
                 $addFields: {
+                    totalStaff: { $size: '$staff' },
                     propertyCount: { $size: '$propertiesDetails' },
                     tenantCount: { $size: '$tenantsDetails' },
                     staffPropertyCount: { $size: '$staffProperties' },
@@ -494,9 +498,11 @@ export const AgentDetails = async (req, res) => {
             {
                 $group: {
                     _id: '$_id',
+                    exsitingTenantFile: { $first: '$exsitingTenantFile' },
                     lname: { $first: '$lname' },
                     fname: { $first: '$fname' },
                     email: { $first: '$email' },
+                    totalStaff: { $first: '$totalStaff' },
                     propertyCount: { $first: '$propertyCount' },
                     tenantCount: { $first: '$tenantCount' },
                     staffPropertyCount: { $first: '$staffPropertyCount' },
@@ -528,9 +534,19 @@ export const AgentDetails = async (req, res) => {
             }),
         });
 
+        let modifiedData = data.map(async (item) => {
+            let url = ''
+            if (item?.exsitingTenantFile) {
+                url = await getPreSignedUrl(item?.exsitingTenantFile)
+            }
+            return { ...item, exsitingTenantFile: url }
+        })
+
+        let finalData = await Promise.all(modifiedData)
+
         // Send paginated data with metadata
         res.send({
-            data,
+            data: finalData,
             success: true,
             total,
             page: Number(page),
@@ -538,6 +554,8 @@ export const AgentDetails = async (req, res) => {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
+        console.log(error);
+
         return HandleError(req, res, error); // Ensure HandleError is implemented
     }
 };
@@ -556,6 +574,23 @@ export const hanndleAgentStatus = async (req, res) => {
         }
     } catch (error) {
         console.log(error)
+        return HandleError(req, res, error)
+    }
+}
+
+
+export const handleExcelFileuload = async (req, res) => {
+    try {
+        if (!req.files) {
+            return res.status(400).send({ message: 'No file uploaded' });
+        }
+        let file = req?.files?.file[0]
+        const uploadedFile = await uploadImageToS3(file, 'files')
+        const userdata = await user.findByIdAndUpdate(req?.body?.addedBy, { exsitingTenantFile: uploadedFile?.s3Key })
+        res.send({ success: true, path: uploadedFile?.s3Key, message: 'File Uploaded Successfully' })
+    } catch (error) {
+        console.log(error);
+
         return HandleError(req, res, error)
     }
 }
