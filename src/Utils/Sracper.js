@@ -75,7 +75,6 @@ async function CheckStatus(user) {
                     throw error;
                 }
             }
-
             const pageSource = await driver.getPageSource();
             await driver.sleep(3000);
             try {

@@ -62,7 +62,7 @@ export const GetallProperty = async (req, res) => {
         const properties = await Property.find(query)
             .populate({
                 path: 'tenants.tenant_id',
-                select: 'lastName firstName isSignOut claimReferenceNumber bedrooms signOutDate',
+                select: 'lastName firstName isSignOut claimReferenceNumber bedrooms signOutDate status',
                 match: { approved_status: 1, isSignOut: 0 }
             })
             .populate({ path: 'addedBy', select: 'fname lname companyname role addedBy' })

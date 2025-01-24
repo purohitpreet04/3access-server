@@ -72,6 +72,7 @@ export const checkTenatStatus = async () => {
         if (tenants.length === 0) {
             return;
         }
+        
         const bulkUpdates = [];
         for (let TenUser of tenants) {
             try {
@@ -83,7 +84,7 @@ export const checkTenatStatus = async () => {
                     }
                 });
             } catch (error) {
-                console.log(error);
+                console.log('error in updateData of tenant');
             }
         }
 

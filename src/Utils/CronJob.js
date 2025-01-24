@@ -5,6 +5,10 @@ cron.schedule('0 0 */7 * *', () => {
     checkTenatStatus()
 });
 
+// cron.schedule('*/5 * * * *', () => {
+//     checkTenatStatus();
+// });
+
 export function initCronJobs() {
     console.log('Cron jobs initialized');
 }

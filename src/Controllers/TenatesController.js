@@ -955,6 +955,9 @@ export const getTenantDetails = async (req, res) => {
                     room: 1,
                     status: 1,
                     signInDate: 1,
+                    Housing_benefit_weekly_amount:1,
+                    Next_HB_payment_amount:1,
+                    Next_HB_payment_date:1,
                     rslDetails: {
                         _id: '$companyDetails._id',
                         rslname: '$companyDetails.companyname',
@@ -1460,18 +1463,8 @@ const handleExportLogic = async (obj) => {
         const address = `${modifiedObj?.doornumber},${modifiedObj?.rodename}`
         modifiedObj["address"] = address
         modifiedObj['fullAddress'] = `${address},${modifiedObj?.area},${modifiedObj?.city},${modifiedObj?.postCode}`
-        // if (modifiedObj['fullAddress']) {
-        //     const splitAddress = modifiedObj['fullAddress'].split(',');
-        //     modifiedObj["address"] = splitAddress[0]?.trim() || '';
-        //     modifiedObj["area"] = splitAddress[1]?.trim() || '';
-        //     modifiedObj["city"] = splitAddress[2]?.trim() || '';
-        //     modifiedObj["postCode"] = splitAddress[3]?.trim() || '';
-        // }
-
         const rslDoc = await RSL.findOne({ companyname: modifiedObj?.rslTypeGroup }).lean();
-        // console.log(rslDoc);
         modifiedObj['rslTypeGroup'] = rslDoc?._id || null;
-
         return modifiedObj;
     } catch (error) {
         throw new Error(`Error in handleExportLogic: ${error.message}`);
@@ -1505,7 +1498,7 @@ const sapratePropertyandTenantData = async (arr) => {
                 properties = [...properties, ...property];
             })
         );
-        console.log(properties);
+        // console.log(properties);
 
         for (const arrItem of arr) {
             let proObj = {}
@@ -1523,20 +1516,12 @@ const sapratePropertyandTenantData = async (arr) => {
             })
             let isPropertyExist
             if (proObj?.rslTypeGroup !== null) {
-                // console.log(properties);
-
-                // isPropertyExist = await Property.findOne({ fullAddress: arrItem?.fullAddress }).lean()
                 isPropertyExist = properties.find((pro) => (pro.fullAddress == arrItem?.fullAddress))
-                // console.log(isPropertyExist?._id);
-                
                 if (!isPropertyExist?._id && Object.entries(proObj).length > 0) {
                     let newProperty = await Property.create({ ...proObj, status: 0 })
                     tenObj['property'] = newProperty?._id || null
                     proObj['_id'] = newProperty?._id || null
-                    console.log('new addedd');
                 } else {
-                    console.log('existing');
-                    
                     tenObj['property'] = isPropertyExist?._id || null
                     proObj['_id'] = isPropertyExist?._id || null
                 }
@@ -1636,9 +1621,9 @@ export const importExistingTenant = async (req, res) => {
             }
         }
         // fs.writeFileSync("demo.json", JSON.stringify({ tenantData, propertydata }))
-        return res.sendStatus(200)
+        return res.send({success:true, message:'File Uploaded'})
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',
