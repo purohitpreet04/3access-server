@@ -18,6 +18,7 @@ async function CheckStatus(user) {
             .build();
 
         try {
+            let bdate = user?.dateOfBirth.split('T')[0].split('-')
             await driver.get('https://espws.necsws.com/ords/pwslive/call_initial_apex_page.nes_selfsrv?service=NEB&la=BIRM&language=ENG');
             const linkElement = await driver.wait(until.elementLocated(By.id('link-LANDSUM010')), 10000);
             await driver.executeScript("arguments[0].scrollIntoView(true);", linkElement);
@@ -46,13 +47,16 @@ async function CheckStatus(user) {
             await NINumber.sendKeys(user?.nationalInsuranceNumber || '');
 
             const dd = await driver.wait(until.elementLocated(By.id('dpCLAU00050_P1')), 10000)
-            await dd.sendKeys(new Date(user?.dateOfBirth).getDate() || '');
+            await dd.sendKeys(bdate[2] || '');
+            // await dd.sendKeys(new Date(user?.dateOfBirth).getDate() || '');
 
             const mm = await driver.wait(until.elementLocated(By.id('dpCLAU00050_P2')), 10000)
-            await mm.sendKeys(new Date(user?.dateOfBirth).getMonth() || '');
+            await mm.sendKeys(bdate[1] || '');
+            // await mm.sendKeys(new Date(user?.dateOfBirth).getMonth() || '');
 
             const yy = await driver.wait(until.elementLocated(By.id('dpCLAU00050_P3')), 10000)
-            await yy.sendKeys(new Date(user?.dateOfBirth).getFullYear() || '');
+            await yy.sendKeys(bdate[0] || '');
+            // await yy.sendKeys(new Date(user?.dateOfBirth).getFullYear() || '');
 
             const postcode = await driver.wait(until.elementLocated(By.id('CLAU00060')), 10000)
             await postcode.sendKeys(user?.property?.postCode || '');
@@ -77,6 +81,7 @@ async function CheckStatus(user) {
             }
             const pageSource = await driver.getPageSource();
             await driver.sleep(3000);
+            let userData = {}
             try {
                 const errorInFetchingData = await driver.findElement(By.className('validation-summary'));
                 if (errorInFetchingData) {
@@ -87,7 +92,8 @@ async function CheckStatus(user) {
                             const errorMessage = await errorItem.getText();
                             errorMessages.push(errorMessage);
                         }
-                        return res({ error: errorMessages.toString(), status: 0, checked: 0 });
+                        userData = { error: errorMessages.toString(), status: 0, checked: 0 }
+                        // return res({ error: errorMessages.toString(), status: 0, checked: 0 });
                     } else {
                         console.log('No error messages found within the validation-summary');
                     }
@@ -99,27 +105,44 @@ async function CheckStatus(user) {
                     throw error; // Re-throw the error if it's not related to the missing element
                 }
             }
-            const table = await driver.wait(until.elementLocated(By.id('R12666048653399214table')), 10000);
-            const rows = await table.findElements(By.css('tbody tr'));
-            const tableData = {};
-            for (let row of rows) {
-                const cells = await row.findElements(By.css('td'));
-                const key = await cells[0].getText();
-                const value = await cells[1].getText();
-                tableData[key] = value;
-            }
-            let userData = {}
-            userData['status'] = tableData?.Status === 'Active' ? 1 : 0
-            userData['Housing_benefit_weekly_amount'] = Number(tableData['Housing benefit weekly amount'].split(' ')[1])
-            userData['Next_HB_payment_amount'] = Number(tableData['Next HB payment amount'].split(' ')[1])
-            userData['Next_HB_payment_date'] = moment(tableData['Next HB payment date'], 'DD/MM/YYYY').toISOString()
 
-            res({ ...userData, checked: 1 })
+            try {
+                const table = await driver.wait(until.elementLocated(By.id('R12666048653399214table')), 10000);
+                const rows = await table.findElements(By.css('tbody tr'));
+                const tableData = {};
+                for (let row of rows) {
+                    const cells = await row.findElements(By.css('td'));
+                    const key = (await cells[0].getText()).replaceAll(' ', '_').trim();
+                    const value = await cells[1].getText();
+                    userData[key] = value;
+                }
+                
+                // console.log('tableData=>', tableData);
+                // userData['Housing_benefit_weekly_amount'] = tableData['Housing benefit weekly amount']
+                // userData['Next_HB_payment_date'] = tableData['Next HB payment date']
+                // userData['Next_HB_payment_amount'] = tableData['Next HB payment amount'] || 0
+
+                // // userData['status'] = tableData?.Status === 'Active' ? 1 : 0
+                // userData['status'] = tableData?.Status === 'Active' ? 1 : 0
+                // // userData['Housing_benefit_weekly_amount'] = Number(tableData['Housing_benefit_weekly_amount'].split(' ')[1])
+                // // userData['Next_HB_payment_amount'] = Number(tableData['Next_HB_payment_amount'].split(' ')[1])
+                // // userData['Next_HB_payment_date'] = moment(tableData['Next_HB_payment_date'], 'DD/MM/YYYY').toISOString()
+                // userData['checked'] = 1
+            } catch (error) {
+                if (error.name === 'NoSuchElementError') {
+                    console.log('No tenant details found. Task Over...');
+                } else {
+                    throw error; // Re-throw the error if it's not related to the missing element
+                }
+            }
+
+
+            res({ ...userData })
         } catch (error) {
             rej(error)
         } finally {
             await driver.quit();
-            console.log('Browser session ended.');
+
             rej()
         }
     })

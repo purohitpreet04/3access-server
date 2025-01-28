@@ -121,7 +121,7 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
         two_weeksserviceCharge: data?.property?.serviceCharges * 2 || 0,
         basicRent: data?.property?.basicRent || 0,
         isPresent: data?.isPresent,
-
+        supportWorkerSignature:data?.staffSignature || '',
         // ...assesment_data,
     };
     // console.log(userdata.ineligibleCharge)
@@ -154,11 +154,11 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
         }
 
         for (let { key } of tenatsignImageArray) {
-            userdata[key] = data[key]
+            if(data[key]){
+                userdata[key] = data[key]
+            }
+            // console.log(key,userdata[key])
         }
-
-
-
         let logo
         if (data?.property?.rslTypeGroup?.rslLogo !== '') {
             logo = await getPreSignedUrl(data?.property?.rslTypeGroup?.rslLogo)
@@ -175,14 +175,13 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
                 }
             }
         }
-
+        
         let html
+        html = await Template.findOne({ _id: tempid }).lean()
+        if (data[html?.key]) {
+            userdata['tenantSignature'] = data[html?.key]
+        }
         if (mongoose.isObjectIdOrHexString(tempid)) {
-            //with query
-            html = await Template.findOne({ _id: tempid }).lean()
-            if (data[html?.key]) {
-                userdata['tenantSignature'] = data[html?.key]
-            }
             if (!pdf) {
                 pdfTemp = await replacePlaceholders(html?.body, userdata)
                 let body = { html: pdfTemp, logo }

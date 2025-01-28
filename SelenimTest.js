@@ -36,13 +36,14 @@ async function updateTenant(TenUser) {
         console.error('Error updating tenant:', error);
     }
 }
+// P:\New folder\3access-server\
 
 let TenUser = {
     _id: '6788f72bc45ba131e9c144d7',
-    lastName: 'ali',
-    nationalInsuranceNumber: 'PX880556A',
-    dateOfBirth: "1988-03-28T00:00:00.000+00:00",
-    property: { postCode: 'B11 3BS' },
-    claimReferenceNumber: '60384800'
+    lastName: 'Josebury',
+    nationalInsuranceNumber: 'Pw217260a',
+    dateOfBirth: "1981-05-07T00:00:00.000+00:00",
+    property: { postCode: 'B23 6JR' },
+    claimReferenceNumber: '60712864'
 }
 updateTenant(TenUser)

@@ -74,53 +74,56 @@ export const AddTenants = async (req, res) => {
                 city: rentproperty?.city,
                 postCode: rentproperty?.postCode
             }, 'Tenant', newTenant?._id, req.query.addedByModel);
-            // let userData = {}
-            // let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city').lean()
-            // if (['company-agent', 'staff'].includes(data?.addedByRole)) {
-            //     let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean()
-            //     userData = { user_id: staffdata?.addedBy?._id, ...staffdata?.addedBy, ...rslData }
-            // } else {
-            //     let agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean()
-            //     userData = { user_id: agentData?._id, ...agentData, ...rslData }
-            // }
-            // const pdfTemplates = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
-            // const attachmentsArray = await Promise.all(
-            //     pdfTemplates.map(async (pdfTemplet) => {
-            //         const pdfBuffer = await GeneratePdf(pdfTemplet?._id, newTenant?._id);
-            //         return {
-            //             filename: pdfTemplet?.name,
-            //             content: pdfBuffer,
-            //             contentType: 'application/pdf',
-            //         };
-            //     })
-            // );
-            // const mailObj = {
-            //     replyTo: userData?.emailto,
-            //     to: userData?.emailto,
-            //     bcc: userData?.emailcc,
-            //     subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} 
-            //     ${newTenant?.middleName || ''} ${newTenant?.lastName || ''},
-            //     ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
-            //     html: EmailTempelates("new_tanant",
-            //         {
-            //             newTenant,
-            //             address: rentproperty?.address,
-            //             area: rentproperty?.area,
-            //             city: rentproperty?.city,
-            //             postCode: rentproperty?.postCode
-            //         }),
-            //     attachments: [...attachmentsArray],
-            // };
-            // await sendMail(mailObj);
-            // const log = new EmailLog({
-            //     userId: ['company-agent', 'staff'].includes(data?.addedByRole) ? userData?.user_id : userData?.user_id,
-            //     subject: mailObj?.subject,
-            //     body: mailObj?.html,
-            //     attachments: mailObj?.attachments.map(attachment => attachment.filename).join(', '),
-            //     emailTo: mailObj?.to,
-            //     emailCC: mailObj?.bcc,
-            // });
-            // await log.save();
+
+            if (data?.tenantSignupEmail && ['User'].includes(req.query.addedByModel) && data?.approved_status == 1) {
+                let userData = {}
+                let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city').lean()
+                if (['company-agent', 'staff'].includes(data?.addedByRole)) {
+                    let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean()
+                    userData = { user_id: staffdata?.addedBy?._id, ...staffdata?.addedBy, ...rslData }
+                } else {
+                    let agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean()
+                    userData = { user_id: agentData?._id, ...agentData, ...rslData }
+                }
+                const pdfTemplates = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
+                const attachmentsArray = await Promise.all(
+                    pdfTemplates.map(async (pdfTemplet) => {
+                        const pdfBuffer = await GeneratePdf(pdfTemplet?._id, newTenant?._id);
+                        return {
+                            filename: pdfTemplet?.name,
+                            content: pdfBuffer,
+                            contentType: 'application/pdf',
+                        };
+                    })
+                );
+                const mailObj = {
+                    replyTo: userData?.emailto,
+                    to: data?.tenantSignupEmail,
+                    bcc: userData?.emailcc,
+                    subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} 
+                ${newTenant?.middleName || ''} ${newTenant?.lastName || ''},
+                ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
+                    html: EmailTempelates("new_tanant",
+                        {
+                            newTenant,
+                            address: rentproperty?.address,
+                            area: rentproperty?.area,
+                            city: rentproperty?.city,
+                            postCode: rentproperty?.postCode
+                        }),
+                    attachments: [...attachmentsArray],
+                };
+                await sendMail(mailObj);
+                const log = new EmailLog({
+                    userId: ['company-agent', 'staff'].includes(data?.addedByRole) ? userData?.user_id : userData?.user_id,
+                    subject: mailObj?.subject,
+                    body: mailObj?.html,
+                    attachments: mailObj?.attachments.map(attachment => attachment.filename).join(', '),
+                    emailTo: mailObj?.to,
+                    emailCC: mailObj?.bcc,
+                });
+                await log.save();
+            }
         }
         if ((['User'].includes(req.query.addedByModel) && data?.approved_status == 1) && property && tenant._id) {
             if (!rentproperty) {
@@ -934,7 +937,7 @@ export const getTenantDetails = async (req, res) => {
                     //         }
                     //     }
                     // },
-                    error:1,
+                    error: 1,
                     title_before_name: 1,
                     middleName: 1,
                     lastName: 1,
@@ -955,9 +958,9 @@ export const getTenantDetails = async (req, res) => {
                     room: 1,
                     status: 1,
                     signInDate: 1,
-                    Housing_benefit_weekly_amount:1,
-                    Next_HB_payment_amount:1,
-                    Next_HB_payment_date:1,
+                    Housing_benefit_weekly_amount: 1,
+                    Next_HB_payment_amount: 1,
+                    Next_HB_payment_date: 1,
                     rslDetails: {
                         _id: '$companyDetails._id',
                         rslname: '$companyDetails.companyname',
@@ -1621,7 +1624,7 @@ export const importExistingTenant = async (req, res) => {
             }
         }
         // fs.writeFileSync("demo.json", JSON.stringify({ tenantData, propertydata }))
-        return res.send({success:true, message:'File Uploaded'})
+        return res.send({ success: true, message: 'File Uploaded' })
     } catch (error) {
         // console.log(error);
         res.status(500).json({

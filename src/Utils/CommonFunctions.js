@@ -172,7 +172,7 @@ export async function replacePlaceholders(template, data) {
             return {
               placeholder,
               replacement: `
-              <img src="${base64img}" alt="signs" style="height: 50px; width: 50px; object-fit: contain; margin-right: 10px;" />
+              <img src="${base64img}" alt="signs" style="height: 200px; width: 200px; object-fit: contain; margin-right: 10px;" />
               `
             };
           }
