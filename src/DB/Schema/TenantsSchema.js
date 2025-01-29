@@ -361,8 +361,10 @@ const TenantSchema = new Schema({
   error: { type: String, default: '' },
   checked: { type: String, default: 0 },
   Next_HB_payment_date: { type: Date, },
-  Next_HB_payment_amount: { type: Number, default: 0 },
-  Housing_benefit_weekly_amount: { type: Number, default: 0 }
+  Suspended_Date: { type: Date, },
+  Next_HB_payment_amount: { type: String, default: '' },
+  Housing_benefit_weekly_amount: { type: String, default: '' },
+  sts_Str: { type: String, default: '' },
 }, {
   timestamps: true
 });

@@ -259,7 +259,7 @@ export const ListTenents = async (req, res) => {
 
     try {
         // Extract query parameters
-        const { page = 1, limit = 10, search = '', addedBy: _id, fromDate, toDate, role } = req.query;
+        const { page = 1, limit = 10, search = '', addedBy: _id, fromDate, toDate, role, filter } = req.query;
         const searchConditions = search
             ? {
                 $or: [
@@ -281,6 +281,11 @@ export const ListTenents = async (req, res) => {
             ]
         }
 
+        if (filter != '') {
+            searchConditions.$or = [
+                { status: Number(filter) }
+            ]
+        }
         if (['agent', 'company'].includes(role)) {
             const staffMembers = await Staff.find({ addedBy: _id }).select('_id').lean();
             const staffIds = staffMembers.map(staff => staff._id);
@@ -336,6 +341,9 @@ export const ListTenents = async (req, res) => {
             { $match: searchConditions },
             {
                 $project: {
+                    status: {
+                        $cond: { if: { $eq: ["$status", 1] }, then: "active", else: "not-active" }
+                    },
                     addedBy: 1,
                     firstName: 1,
                     lastName: 1,
@@ -414,6 +422,7 @@ export const ListTenents = async (req, res) => {
             }
         });
     } catch (error) {
+        console.log(error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',
@@ -961,6 +970,8 @@ export const getTenantDetails = async (req, res) => {
                     Housing_benefit_weekly_amount: 1,
                     Next_HB_payment_amount: 1,
                     Next_HB_payment_date: 1,
+                    Suspended_Date:1,
+                    sts_Str:1,
                     rslDetails: {
                         _id: '$companyDetails._id',
                         rslname: '$companyDetails.companyname',

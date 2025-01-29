@@ -102,7 +102,7 @@ async function CheckStatus(user) {
                 if (error.name === 'NoSuchElementError') {
                     console.log('No validation-summary element found. Moving to table...');
                 } else {
-                    throw error; // Re-throw the error if it's not related to the missing element
+                    throw error;
                 }
             }
 
@@ -114,20 +114,17 @@ async function CheckStatus(user) {
                     const cells = await row.findElements(By.css('td'));
                     const key = (await cells[0].getText()).replaceAll(' ', '_').trim();
                     const value = await cells[1].getText();
-                    userData[key] = value;
+                    if (key === 'Next_HB_payment_date' || key === 'Suspended_Date') {
+                        userData[key] = moment(value, 'DD/MM/YYYY').toISOString()
+                    }else {
+                        userData[key] = value;
+                    }
                 }
-                
-                // console.log('tableData=>', tableData);
-                // userData['Housing_benefit_weekly_amount'] = tableData['Housing benefit weekly amount']
-                // userData['Next_HB_payment_date'] = tableData['Next HB payment date']
-                // userData['Next_HB_payment_amount'] = tableData['Next HB payment amount'] || 0
 
-                // // userData['status'] = tableData?.Status === 'Active' ? 1 : 0
-                // userData['status'] = tableData?.Status === 'Active' ? 1 : 0
-                // // userData['Housing_benefit_weekly_amount'] = Number(tableData['Housing_benefit_weekly_amount'].split(' ')[1])
-                // // userData['Next_HB_payment_amount'] = Number(tableData['Next_HB_payment_amount'].split(' ')[1])
-                // // userData['Next_HB_payment_date'] = moment(tableData['Next_HB_payment_date'], 'DD/MM/YYYY').toISOString()
-                // userData['checked'] = 1
+                userData['status'] = userData?.Status === 'Active' ? 1 : 0
+                userData['sts_Str'] = userData?.Status
+                userData['checked'] = 1
+
             } catch (error) {
                 if (error.name === 'NoSuchElementError') {
                     console.log('No tenant details found. Task Over...');
@@ -135,14 +132,11 @@ async function CheckStatus(user) {
                     throw error; // Re-throw the error if it's not related to the missing element
                 }
             }
-
-
             res({ ...userData })
         } catch (error) {
             rej(error)
         } finally {
             await driver.quit();
-
             rej()
         }
     })
