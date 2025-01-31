@@ -10,7 +10,8 @@ import sanitizeHtml from 'sanitize-html';
 import crypto from 'crypto';
 import { s3 } from './s3.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-
+import XLSX from 'xlsx';
+import fs from 'fs';
 
 config()
 
@@ -422,4 +423,31 @@ export let replaceData = {
   nationalInsuranceNumber: "NINO",
   claimReferenceNumber: "Claim Reference No",
   signInDate: "Sign In Date"
+}
+
+export function isISODate(value) {
+  const isValidMomentDate = typeof value === 'object' && moment(value, moment.ISO_8601).isValid();
+  // const isValidJSDate = !isNaN(Date.parse(value)) && !isNaN(new Date(value).getTime());
+  return isValidMomentDate
+}
+export function generateExcelFile(data, headers, fileName = "output.xlsx") {
+  // console.log(data);
+  const transformedData = data.map(row => {
+    let newRow = {};
+    Object.keys(headers).forEach(key => {
+      if (isISODate(row[key])) {
+        newRow[headers[key]] = moment(row[key]).format("DD-MM-YYYY");
+      } else {
+        newRow[headers[key]] = row[key];
+      }
+
+    });
+    return newRow;
+  });
+  // fs.writeFileSync('demo.json', JSON.stringify(transformedData));
+  const worksheet = XLSX.utils.json_to_sheet(transformedData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+  return excelBuffer;
 }

@@ -4,7 +4,7 @@ import Tenants from "../DB/Schema/TenantsSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import user from "../DB/Schema/userSchema.js";
 import { config } from 'dotenv';
-import { generateAttachments, generatePdfFromHtml, getDate, property, replaceData, tenant, UploaadBase64ToS3 } from "../Utils/CommonFunctions.js";
+import { generateAttachments, generateExcelFile, generatePdfFromHtml, getDate, property, replaceData, tenant, UploaadBase64ToS3 } from "../Utils/CommonFunctions.js";
 import EmailTempelates from "../Utils/EmailTempelate.js";
 import sendMail from "../Utils/email.service.js";
 import { getDocumentModule } from "../Models/DocumentModel.js";
@@ -20,7 +20,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3 } from "../Utils/s3.js";
 import bcrypt from 'bcryptjs';
 import XLSX from 'xlsx';
-import { error } from "console";
+import moment from "moment";
 // const workerPool = new WorkerPool(3);
 
 export const AddTenants = async (req, res) => {
@@ -268,7 +268,9 @@ export const ListTenents = async (req, res) => {
                     { city: { $regex: search, $options: 'i' } },
                     { firstName: { $regex: search, $options: 'i' } },
                     { lastName: { $regex: search, $options: 'i' } },
-                    { middleName: { $regex: search, $options: 'i' } }
+                    { middleName: { $regex: search, $options: 'i' } },
+                    { claimReferenceNumber: { $regex: search, $options: 'i' } },
+                    { nationalInsuranceNumber: { $regex: search, $options: 'i' } },
                 ]
             }
             : {};
@@ -970,8 +972,8 @@ export const getTenantDetails = async (req, res) => {
                     Housing_benefit_weekly_amount: 1,
                     Next_HB_payment_amount: 1,
                     Next_HB_payment_date: 1,
-                    Suspended_Date:1,
-                    sts_Str:1,
+                    Suspended_Date: 1,
+                    sts_Str: 1,
                     rslDetails: {
                         _id: '$companyDetails._id',
                         rslname: '$companyDetails.companyname',
@@ -1485,7 +1487,6 @@ const handleExportLogic = async (obj) => {
     }
 };
 
-
 const sapratePropertyandTenantData = async (arr) => {
 
 
@@ -1549,8 +1550,6 @@ const sapratePropertyandTenantData = async (arr) => {
         console.log('error in sapratePropertyandTenantData func', error);
     }
 }
-
-
 
 export const importExistingTenant = async (req, res) => {
     try {
@@ -1638,6 +1637,164 @@ export const importExistingTenant = async (req, res) => {
         return res.send({ success: true, message: 'File Uploaded' })
     } catch (error) {
         // console.log(error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch tenants',
+            error: error.message
+        });
+    }
+}
+
+export const ExportNotActiveTenants = async (req, res) => {
+    try {
+        const { _id, addedByModal, role } = req.body;
+
+        let query = {};
+        if (['agent', 'company'].includes(role)) {
+            const staffMembers = await Staff.find({ addedBy: _id }).select('_id').lean();
+            const staffIds = staffMembers.map(staff => staff._id);
+
+            query = {
+                $and: [
+                    { status: 0 },
+                    { isSignOut: 0 },
+                    {
+                        $or: [
+                            { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'User' },
+                            { addedBy: { $in: staffIds }, addedByModel: 'Staff' }
+                        ]
+                    }
+                ]
+            };
+        } else if (['staff', 'company-agent'].includes(role)) {
+
+            const staffMembers = await Staff.findOne({ _id }).select('permission').lean();
+            if (!staffMembers?.permission.includes(5)) {
+                return res.status(403).json({ message: 'Access Denied', success: false });
+            }
+            query = {
+                $and: [
+                    { isSignOut: 0 },
+                    { status: 0 },
+                    { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
+                ]
+            };
+        } else {
+            return res.status(403).json({ message: 'Access Denied' });
+        }
+
+        const tenants = await Tenants.aggregate([
+            { $match: query },
+            {
+                $lookup: {
+                    from: 'properties',
+                    localField: 'property',
+                    foreignField: '_id',
+                    as: 'propertyDetails'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'rsls',
+                    localField: 'propertyDetails.rslTypeGroup',
+                    foreignField: '_id',
+                    as: 'companyDetails'
+                }
+            },
+            { $unwind: { path: "$propertyDetails", preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    status: {
+                        $cond: { if: { $eq: ["$status", 1] }, then: "active", else: "not-active" }
+                    },
+                    status: 1,
+                    "addedBy": '$addedBy',
+                    "firstName": "$firstName",
+                    "lastName": "$lastName",
+                    "middleName": "$middleName",
+                    "dateOfBirth": "$dateOfBirth",
+                    addedByModel: 1,
+                    "room": "$room",
+                    "signInDate": "$signInDate",
+                    "createdAt": "$createdAt",
+                    "claimReferenceNumber": "$claimReferenceNumber",
+                    'nationalInsuranceNumber': "$nationalInsuranceNumber",
+                    "propertyAddress": '$propertyDetails.address',
+                    "area": '$propertyDetails.area',
+                    "city": '$propertyDetails.city',
+                    "bedrooms": '$propertyDetails.bedrooms',
+                    "basicRent": '$propertyDetails.basicRent',
+                    postCode: '$propertyDetails.postCode',
+                    serviceCharges: '$propertyDetails.serviceCharges',
+                    eligibleRent: '$propertyDetails.eligibleRent',
+                    ineligibleCharge: '$propertyDetails.ineligibleCharge',
+                    sharedWithOther: '$propertyDetails.sharedWithOther',
+                    'rslTypeGroup': { $arrayElemAt: ['$companyDetails.companyname', 0] },
+                }
+            },
+        ]);
+        const modifydata = await Promise.all(
+            tenants.map(async (item) => {
+                let addedByData;
+                if (['Staff'].includes(item.addedByModel)) {
+                    addedByData = await Staff.findOne({ _id: item.addedBy }).select('username _id role').populate({ path: 'addedBy', select: 'role' });
+                    return {
+                        ...item,
+                        property: `${item.propertyDetails?.address}, ${item.propertyDetails?.area}, ${item.propertyDetails?.city}`,
+                        addedBy: addedByData?.username,
+                        claimReferenceNumber: item?.claimReferenceNumber === ('' || undefined) ? "No" : item?.claimReferenceNumber
+                    };
+                } else if (['User'].includes(item.addedByModel)) {
+                    addedByData = await user.findOne({ _id: item.addedBy }).select('username _id role fname lname companyname').populate({ path: 'addedBy', select: 'role' })
+                    return {
+                        ...item,
+                        property: `${item.propertyDetails?.address}, ${item.propertyDetails?.area}, ${item.propertyDetails?.city}`,
+                        addedBy: ['company'].includes(addedByData?.role) ? addedByData?.companyname : addedByData.fname + " " + addedByData.lname,
+                        addedbyrole: addedByData?.role,
+                        addedByData,
+                        claimReferenceNumber: item?.claimReferenceNumber === ('' || undefined) ? "No" : item?.claimReferenceNumber
+                    };
+                }
+
+            })
+        );
+        let replaceKeys = {
+            createdAt: 'Created At',
+            addedBy: 'Added By',
+            rslTypeGroup: "Rsl",
+            propertyAddress: 'Property Address',
+            area: "Area Name",
+            city: "City",
+            postCode: "Postcode",
+            bedrooms: "Number of Bedrooms in Property",
+            basicRent: "Basic Rent",
+            serviceCharges: "Service Charges",
+            eligibleRent: "eligible Rent",
+            ineligibleCharge: "weekly eligible Charge",
+            sharedWithOther: "Bedroom sharedWithOther",
+            firstName: "First Name",
+            middleName: "Middle Name",
+            lastName: "Surname",
+            room: "Room",
+            dateOfBirth: "Date of Birth",
+            nationalInsuranceNumber: "NINO",
+            claimReferenceNumber: "Claim Reference No",
+            signInDate: "Sign In Date"
+        }
+
+
+        let buffer = await generateExcelFile(modifydata, replaceKeys)
+
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", "attachment; filename=download.xlsx");
+        res.setHeader('Content-Length', buffer.length);
+        return res.end(buffer);
+
+
+        // Send the buffer as a response
+    } catch (error) {
+        console.log(error);
+
         res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',

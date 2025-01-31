@@ -284,6 +284,7 @@ export const fetchUserDetails = async (req, response) => {
                     role: User.role,
                     _id: User._id,
                     permmission: User?.permission,
+                   
                 },
             }
         } else {
@@ -317,6 +318,7 @@ export const fetchUserDetails = async (req, response) => {
                     status: User?.status,
                     emailto: User?.emailto,
                     emailcc: User?.emailcc,
+                    sendEmail: User?.sendEmail,
                 },
             }
             let agentCount = { active: 0, inactive: 0 }
@@ -593,4 +595,20 @@ export const handleExcelFileuload = async (req, res) => {
 
         return HandleError(req, res, error)
     }
+}
+
+
+
+export const handleAgentStatus = async (req, res) => {
+    try {
+        const { agentId, status } = req.query;
+        const updatedAgent = await user.findByIdAndUpdate(agentId, { sendEmail: status }, { new: true });  // Update the status of the agent   
+        if (!updatedAgent) {
+            return res.status(404).json({ success: false, message: 'Agent not found' });
+        }
+        res.status(200).json({ success: true, message: 'Agent status updated successfully' });
+    } catch (error) {
+        return HandleError(req, res, error);
+    }
+
 }

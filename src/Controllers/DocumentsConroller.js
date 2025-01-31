@@ -13,7 +13,6 @@ export const getdocument = async (req, res) => {
         // let bhtml = addBorderAndSpacingToHTML(htmlContent.html, htmlContent.logo);
         res.send(htmlContent.html)
     } catch (error) {
-        console.log(error)
         return res.status(500).json({
             success: false,
             message: 'Failed to fetch tenant details',

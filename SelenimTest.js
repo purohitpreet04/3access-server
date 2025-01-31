@@ -2,6 +2,7 @@ import moment from "moment";
 import CheckStatus from "./src/Utils/Sracper.js"
 import Tenants from "./src/DB/Schema/TenantsSchema.js";
 import { DbConnnection } from "./src/DB/DB.js";
+import { handleSendEmail } from "./src/Utils/CronJobFunction.js";
 
 
 
@@ -46,4 +47,5 @@ let TenUser = {
     property: { postCode: 'B23 6JR' },
     claimReferenceNumber: '60712864'
 }
-updateTenant(TenUser)
+// updateTenant(TenUser)
+handleSendEmail()

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AddCompanies, getSelectedData } from '../Controllers/userConttroller.js';
 import verifyJWT, { handleBase64Images } from '../Utils/MIddelware.js';
-import { AddTenants, approveStatus, checkForNINO, EditTenatns, getTenantDetails, getTenantsAllDetails, importExistingTenant, ListTenents, PendingTenentsList, signOutTenantList, signOutTenants, UpdateAssessment } from '../Controllers/TenatesController.js';
+import { AddTenants, approveStatus, checkForNINO, EditTenatns, ExportNotActiveTenants, getTenantDetails, getTenantsAllDetails, importExistingTenant, ListTenents, PendingTenentsList, signOutTenantList, signOutTenants, UpdateAssessment } from '../Controllers/TenatesController.js';
 import { getdocument } from '../Controllers/DocumentsConroller.js';
 import { upload } from '../Utils/uploadimage.js';
 
@@ -23,5 +23,6 @@ tenents.get('/getdocument', verifyJWT, getdocument);
 tenents.get('/gettenantdetails', verifyJWT, getTenantDetails);
 tenents.get('/get-all-details', verifyJWT, getTenantsAllDetails);
 tenents.get('/check-nino', verifyJWT, checkForNINO);
+tenents.post('/exportnotactivetenants', verifyJWT, ExportNotActiveTenants);
 
 export default tenents;

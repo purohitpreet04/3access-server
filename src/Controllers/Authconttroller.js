@@ -108,6 +108,7 @@ export const registerUser = async (req, res) => {
             return res.status(400).json({ error: 'All required fields must be provided', severity: 'error', success: false });
         }
 
+
         const existingUser = await user.findOne({ email });
         if (existingUser) {
             return res.status(409).json({ error: 'User already exists with this email', severity: 'error', success: false, page: 1 });
@@ -138,7 +139,7 @@ export const registerUser = async (req, res) => {
         });
 
         await newUser.save();
-
+        try{
         if (newUser?._id) {
             await RSL.updateMany(
                 { status: 0 },
@@ -148,7 +149,7 @@ export const registerUser = async (req, res) => {
         const verificationLink = `${process.env.FRONTEND_URL}auth/verify-user/${newUser?._id}/${verificationToken}`;
        let isSended = await sendMail({
             from:process.env.SMTP_USER,
-            to:coruspondingEmail, 
+            to:email, 
             subject: 'Email for Verification',
             html: `
                  <!DOCTYPE html>
@@ -216,13 +217,16 @@ export const registerUser = async (req, res) => {
             </body>
             </html>`
         })
-
+        // console.log(isSended);
         if(isSended?.success === true){
-            return res.send({message:'Verification link sended To your Email', success:true})
+            return res.status(200).send({message:'Verification link sended To your Email', success:true})
         }else{
             return res.send({message:'Error While Sending Email', success:true})
         }
-
+        
+    }catch(e){
+        console.log(e);
+    }
 
     } catch (error) {
         console.log(error);

@@ -98,7 +98,8 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    exsitingTenantFile: { type: String, default: '' }
+    exsitingTenantFile: { type: String, default: '' },
+    sendEmail: { type: Number, default: 0 },
 }, {
     timestamps: true,
 });
