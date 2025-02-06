@@ -12,6 +12,8 @@ import { s3 } from './s3.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import XLSX from 'xlsx';
 import fs from 'fs';
+import { __dirname } from '../../index.js'
+
 
 config()
 
@@ -450,4 +452,40 @@ export function generateExcelFile(data, headers, fileName = "output.xlsx") {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
   const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
   return excelBuffer;
+}
+
+
+export const convertToISODate = (dateString) => {
+
+  if (dateString === undefined) return ''
+  // return moment(dateString, 'M/D/YY')
+  return moment(dateString, 'M/D/YY').toISOString()
+  // const [month, day, year] = dateString.split('/');
+  // const fullYear = parseInt(year, 10) < 100 ? `20${year}` : year; // Ensure correct year (2025 instead of 1925)
+  // return new Date(`${fullYear}-${month}-${day}`).toISOString();
+};
+
+
+export function chunkArray(array, size) {
+  let result = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
+
+
+export function writeLog(logMessage) {
+  const logDir = path.join(__dirname, 'logs'); // Directory for logs
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir); // Create 'logs' directory if it doesn't exist
+  }
+  let date = new Date()
+  const logFile = path.join(logDir, `cron_log_${date.toISOString().split('T')[0]}.txt`);
+
+  fs.appendFile(logFile, logMessage + '\n', (err) => {
+    if (err) {
+      console.error('Error writing log:', err);
+    }
+  });
 }

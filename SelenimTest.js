@@ -29,7 +29,7 @@ async function updateTenant(TenUser) {
         if (result instanceof Error) {
             throw result;
         }
-        console.log("result=>", result);
+        // console.log("result=>", result);
 
         // await Tenants.findByIdAndUpdate(TenUser?._id, { ...result });
         console.log('Tenant updated successfully');
@@ -40,12 +40,12 @@ async function updateTenant(TenUser) {
 // P:\New folder\3access-server\
 
 let TenUser = {
-    _id: '6788f72bc45ba131e9c144d7',
-    lastName: 'Josebury',
-    nationalInsuranceNumber: 'Pw217260a',
-    dateOfBirth: "1981-05-07T00:00:00.000+00:00",
-    property: { postCode: 'B23 6JR' },
-    claimReferenceNumber: '60712864'
+    _id: '679b6f3a30b6d312330b3c77',
+    lastName: 'Ehtesham',
+    nationalInsuranceNumber: 'PH416711D',
+    dateOfBirth: "2002-01-22",
+    property: { postCode: 'B11 3BS' },
+    claimReferenceNumber: '60716587'
 }
-// updateTenant(TenUser)
-handleSendEmail()
+updateTenant(TenUser)
+// handleSendEmail()

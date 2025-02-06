@@ -1,24 +1,30 @@
 import { Builder, By, until } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js';
+// import firefox from 'selenium-webdriver/firefox'
+
 import fs from 'fs'
 import moment from 'moment';
 
 async function CheckStatus(user) {
-
     return new Promise(async (res, rej) => {
         const options = new chrome.Options();
         options.addArguments('--headless');
         options.addArguments('--disable-gpu');
         options.addArguments('--no-sandbox');
         options.addArguments('--disable-dev-shm-usage');
-
+        
         const driver = new Builder()
-            .forBrowser('chrome')
-            .setChromeOptions(options)
-            .build();
+        .forBrowser('chrome')
+        .setChromeOptions(options)
+        .build();
 
+        // const driver2 = new Builder()
+        // .forBrowser('chrome')
+        // .setChromeOptions(options)
+        // .build();
+        
         try {
-            let bdate = user?.dateOfBirth.split('T')[0].split('-')
+            let bdate = moment(user?.dateOfBirth).format('YYYY-MM-DD').split('-') 
             await driver.get('https://espws.necsws.com/ords/pwslive/call_initial_apex_page.nes_selfsrv?service=NEB&la=BIRM&language=ENG');
             const linkElement = await driver.wait(until.elementLocated(By.id('link-LANDSUM010')), 10000);
             await driver.executeScript("arguments[0].scrollIntoView(true);", linkElement);
@@ -27,19 +33,17 @@ async function CheckStatus(user) {
             try {
                 await linkElement.click();
             } catch (error) {
+
                 if (error.name === 'ElementClickInterceptedError') {
                     await driver.executeScript("arguments[0].click();", linkElement);
                 }
             }
-
             await driver.wait(until.urlContains('f?p=NEBPWS:210'), 10000);
             let url = await driver.getCurrentUrl()
             await driver.get(url);
-            driver.sleep(3000)
-
+            driver.sleep(5000)
             const checkbox = await driver.wait(until.elementLocated(By.id('cbCLAU00020')), 10000);
             await driver.executeScript("arguments[0].value = 'y';", checkbox);
-
             const ln = await driver.wait(until.elementLocated(By.id('CLAU00030')), 10000);
             await ln.sendKeys(user?.lastName || '');
 
@@ -80,7 +84,7 @@ async function CheckStatus(user) {
                 }
             }
             const pageSource = await driver.getPageSource();
-            await driver.sleep(3000);
+            await driver.sleep(5000);
             let userData = {}
             try {
                 const errorInFetchingData = await driver.findElement(By.className('validation-summary'));
@@ -102,10 +106,12 @@ async function CheckStatus(user) {
                 if (error.name === 'NoSuchElementError') {
                     console.log('No validation-summary element found. Moving to table...');
                 } else {
-                    throw error;
+                    console.log('No tenant details found. Task Over...');
                 }
             }
-
+          
+            
+            // fs.writeFileSync('demo.html', pageSource)
             try {
                 const table = await driver.wait(until.elementLocated(By.id('R12666048653399214table')), 10000);
                 const rows = await table.findElements(By.css('tbody tr'));
@@ -128,10 +134,11 @@ async function CheckStatus(user) {
             } catch (error) {
                 if (error.name === 'NoSuchElementError') {
                     console.log('No tenant details found. Task Over...');
-                } else {
-                    throw error; // Re-throw the error if it's not related to the missing element
+                }else{
+                    console.log('No tenant details found. Task Over...');
                 }
             }
+            // console.log("userData=>", userData);
             res({ ...userData })
         } catch (error) {
             rej(error)

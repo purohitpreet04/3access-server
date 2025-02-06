@@ -4,7 +4,7 @@ import Tenants from "../DB/Schema/TenantsSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import user from "../DB/Schema/userSchema.js";
 import { config } from 'dotenv';
-import { generateAttachments, generateExcelFile, generatePdfFromHtml, getDate, property, replaceData, tenant, UploaadBase64ToS3 } from "../Utils/CommonFunctions.js";
+import { convertToISODate, generateAttachments, generateExcelFile, generatePdfFromHtml, getDate, property, replaceData, tenant, UploaadBase64ToS3 } from "../Utils/CommonFunctions.js";
 import EmailTempelates from "../Utils/EmailTempelate.js";
 import sendMail from "../Utils/email.service.js";
 import { getDocumentModule } from "../Models/DocumentModel.js";
@@ -1465,12 +1465,12 @@ const handleExportLogic = async (obj) => {
         const isDateFormat = (str) => /^\d{2}-\d{2}-\d{4}$/.test(str);
         let modifiedObj = {};
 
+
         Object.entries(replaceData).forEach(([key, val]) => {
-            if (typeof obj[val] === "string" && isDateFormat(obj[val])) {
-                const [day, month, year] = obj[val].split("-");
-                const date = new Date(`${year}-${month}-${day}`);
-                if (!isNaN(date.getTime())) {
-                    modifiedObj[key] = date.toISOString();
+            
+            if (['Sign In Date', "Date of Birth"].includes(val)) {
+                if (obj[val]) {
+                    modifiedObj[key] = convertToISODate(obj[val]);
                 }
             } else {
                 modifiedObj[key] = obj[val] || '';
@@ -1546,6 +1546,7 @@ const sapratePropertyandTenantData = async (arr) => {
         }
 
         return { tenantData, propertydata }
+
     } catch (error) {
         console.log('error in sapratePropertyandTenantData func', error);
     }
@@ -1560,11 +1561,14 @@ export const importExistingTenant = async (req, res) => {
         const fileBuffer = fs.readFileSync(req?.files?.file[0]?.path);
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
         let modifiedData = data.map(async (obj) => {
             let modifiedObj = await handleExportLogic(obj)
+            // console.log('modifiedObj',modifiedObj);
             return { ...modifiedObj, addedByModel, addedByRole, addedBy }
         })
+        // console.log('obj', modifiedData);
+        
         let finalData = await Promise.all(modifiedData)
         let { tenantData, propertydata } = await sapratePropertyandTenantData(finalData)
         for (const tenObj of tenantData) {
@@ -1636,7 +1640,7 @@ export const importExistingTenant = async (req, res) => {
         // fs.writeFileSync("demo.json", JSON.stringify({ tenantData, propertydata }))
         return res.send({ success: true, message: 'File Uploaded' })
     } catch (error) {
-        // console.log(error);
+        console.log(error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',
@@ -1647,10 +1651,11 @@ export const importExistingTenant = async (req, res) => {
 
 export const ExportNotActiveTenants = async (req, res) => {
     try {
-        const { _id, addedByModal, role } = req.body;
+        const { _id, role } = req.body;
+        const { addedByModel } = req.query;
 
         let query = {};
-        if (['agent', 'company'].includes(role)) {
+        if (['User', 'company'].includes(addedByModel)) {
             const staffMembers = await Staff.find({ addedBy: _id }).select('_id').lean();
             const staffIds = staffMembers.map(staff => staff._id);
 
@@ -1666,7 +1671,7 @@ export const ExportNotActiveTenants = async (req, res) => {
                     }
                 ]
             };
-        } else if (['staff', 'company-agent'].includes(role)) {
+        } else if (['Staff', 'company-agent'].includes(addedByModal)) {
 
             const staffMembers = await Staff.findOne({ _id }).select('permission').lean();
             if (!staffMembers?.permission.includes(5)) {

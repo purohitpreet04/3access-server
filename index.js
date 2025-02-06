@@ -17,7 +17,7 @@ import { fileURLToPath } from "url";
 import rslRoutes from "./src/routes/RSLroutes.js";
 import { getDate } from "./src/Utils/CommonFunctions.js";
 import common from "./src/routes/CommonRoutes.js";
-import checkTenatStatus from "./src/Utils/CronJobFunction.js";
+import checkTenatStatus, { handleSendEmail, testTenants } from "./src/Utils/CronJobFunction.js";
 // import { checkTenatStatus } from "./SelenimTest.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -63,8 +63,8 @@ app.use((err, req, res, next) => {
 });
 initCronJobs()
 DbConnnection()
-
-// setTimeout(() => { checkTenatStatus() }, 3000)
+// testTenants()
+setTimeout(() => { handleSendEmail() }, 3000)
 
 app.listen(process.env.PORT, () => {
     console.log('server is running...')
