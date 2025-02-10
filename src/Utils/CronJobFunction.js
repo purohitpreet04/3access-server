@@ -50,7 +50,6 @@ import fs from 'fs';
 // }
 
 export const checkTenatStatus = async () => {
-
     try {
         const tenants = await Tenants.find({
             checked: 0,
@@ -72,43 +71,35 @@ export const checkTenatStatus = async () => {
         }).populate({
             path: 'property',
             select: 'postCode'
-        }).limit()
+        }).limit(15)
             .lean()
             .sort({ createdAt: -1 })
             .exec();
-
         if (tenants.length === 0) {
             return;
         }
         let error = {}
         let splitarray = chunkArray(tenants, 3)
-        const bulkUpdates = [];
+        let bulkUpdates = [];
         for (let Chunk of splitarray) {
             for (let TenUser of Chunk) {
-                try {
                     const res = await CheckStatus(TenUser);
-                    let date = new Date()
+                    let date = new Date();
                     if (res?.error) {
                         const logMessage = `[${date.toISOString()}] ${TenUser.firstName || ''} ${TenUser?.middleName || ''} ${TenUser.lastName || ''} | NINO: ${TenUser.nationalInsuranceNumber || ''} | Claim Ref: ${TenUser.claimReferenceNumber || "No"} | Error: ${res.error}`;
                         writeLog(logMessage);
                     }
-                    console.log('ischecked', TenUser._id);
                     bulkUpdates.push({
                         updateOne: {
                             filter: { _id: TenUser._id },
                             update: { $set: { ...res } }
                         }
                     });
-
-                } catch (error) {
-                    console.log('error in updateData of tenant');
-                }
             }
         }
         if (bulkUpdates.length > 0) {
             await Tenants.bulkWrite(bulkUpdates);
         }
-
     } catch (error) {
         console.log('error in cron job');
     }

@@ -140,10 +140,10 @@ async function CheckStatus(user) {
             }
             // console.log("userData=>", userData);
             res({ ...userData })
+            await driver.quit();
         } catch (error) {
             rej(error)
         } finally {
-            await driver.quit();
             rej()
         }
     })

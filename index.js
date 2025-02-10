@@ -17,7 +17,6 @@ import { fileURLToPath } from "url";
 import rslRoutes from "./src/routes/RSLroutes.js";
 import { getDate } from "./src/Utils/CommonFunctions.js";
 import common from "./src/routes/CommonRoutes.js";
-import checkTenatStatus, { handleSendEmail, testTenants } from "./src/Utils/CronJobFunction.js";
 // import { checkTenatStatus } from "./SelenimTest.js";
 
 const __filename = fileURLToPath(import.meta.url);
