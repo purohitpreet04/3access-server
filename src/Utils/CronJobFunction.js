@@ -72,8 +72,9 @@ export const checkTenatStatus = async () => {
         }).populate({
             path: 'property',
             select: 'postCode'
-        }).limit(10)
+        }).limit()
             .lean()
+            .sort({ createdAt: -1 })
             .exec();
 
         if (tenants.length === 0) {
@@ -91,6 +92,7 @@ export const checkTenatStatus = async () => {
                         const logMessage = `[${date.toISOString()}] ${TenUser.firstName || ''} ${TenUser?.middleName || ''} ${TenUser.lastName || ''} | NINO: ${TenUser.nationalInsuranceNumber || ''} | Claim Ref: ${TenUser.claimReferenceNumber || "No"} | Error: ${res.error}`;
                         writeLog(logMessage);
                     }
+                    console.log('ischecked', TenUser._id);
                     bulkUpdates.push({
                         updateOne: {
                             filter: { _id: TenUser._id },
@@ -120,19 +122,17 @@ export default checkTenatStatus
 export const handleSendEmail = async () => {
     try {
 
+        console.log('bhbbjbhjbb ');
 
         let agents = await user.find({ role: 'agent', status: 1, sendEmail: 1 }).lean().exec();
         if (agents.length === 0) {
             return;
         }
         agents.map(async (agent) => {
-           
             let tenants = await handleNotActiveTenants(agent._id);
-
             if (tenants.length === 0) {
                 return;
             }
-
             let replaceKeys = {
                 createdAt: 'Created At',
                 addedBy: 'Added By',

@@ -99,7 +99,7 @@ const userSchema = new mongoose.Schema({
         default: 0
     },
     exsitingTenantFile: { type: String, default: '' },
-    sendEmail: { type: Number, default: 0 },
+    sendEmail: { type: Number, default: 1 },
 }, {
     timestamps: true,
 });

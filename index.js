@@ -64,7 +64,6 @@ app.use((err, req, res, next) => {
 initCronJobs()
 DbConnnection()
 // testTenants()
-setTimeout(() => { handleSendEmail() }, 3000)
 
 app.listen(process.env.PORT, () => {
     console.log('server is running...')

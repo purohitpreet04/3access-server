@@ -610,5 +610,8 @@ export const handleAgentStatus = async (req, res) => {
     } catch (error) {
         return HandleError(req, res, error);
     }
-
 }
+
+
+// export const handleEmailforActive
+
