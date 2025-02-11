@@ -612,6 +612,3 @@ export const handleAgentStatus = async (req, res) => {
     }
 }
 
-
-// export const handleEmailforActive
-

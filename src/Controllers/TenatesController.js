@@ -21,6 +21,7 @@ import { s3 } from "../Utils/s3.js";
 import bcrypt from 'bcryptjs';
 import XLSX from 'xlsx';
 import moment from "moment";
+import { handleActiveTenants, handleDeleteExportedData, handleNotActiveTenants } from "../Models/TenantModal.js";
 // const workerPool = new WorkerPool(3);
 
 export const AddTenants = async (req, res) => {
@@ -295,6 +296,7 @@ export const ListTenents = async (req, res) => {
             query = {
                 $and: [
                     { isSignOut: 0 },
+                    { isDeleted: 0 },
                     { approved_status: 1 },
                     searchConditions,
                     {
@@ -314,6 +316,7 @@ export const ListTenents = async (req, res) => {
             query = {
                 $and: [
                     { isSignOut: 0 },
+                    { isDeleted: 0 },
                     { approved_status: 1 },
                     searchConditions,
                     { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
@@ -444,7 +447,9 @@ export const signOutTenantList = async (req, res) => {
                     { city: { $regex: search, $options: 'i' } },
                     { firstName: { $regex: search, $options: 'i' } },
                     { lastName: { $regex: search, $options: 'i' } },
-                    { middleName: { $regex: search, $options: 'i' } }
+                    { middleName: { $regex: search, $options: 'i' } },
+                    { claimReferenceNumber: { $regex: search, $options: 'i' } },
+                    { nationalInsuranceNumber: { $regex: search, $options: 'i' } },
                 ]
             }
             : {};
@@ -465,6 +470,7 @@ export const signOutTenantList = async (req, res) => {
             query = {
                 $and: [
                     { isSignOut: 1 },
+                    { isDeleted: 0 },
                     searchConditions,
                     {
                         $or: [
@@ -482,6 +488,7 @@ export const signOutTenantList = async (req, res) => {
             query = {
                 $and: [
                     { isSignOut: 1 },
+                    { isDeleted: 0 },
                     searchConditions,
                     { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
                 ]
@@ -526,13 +533,9 @@ export const signOutTenantList = async (req, res) => {
                     'propertyDetails.city': 1
                 }
             },
-
-            { $sort: { createdAt: -1 } },
-
+            { $sort: { signOutDate: -1 } },
             { $skip: (pageNum - 1) * limitNum },
-
             { $limit: limitNum },
-            { $sort: { signOutDate: 1 } }
         ]);
 
         const modifydata = await Promise.all(
@@ -1467,7 +1470,7 @@ const handleExportLogic = async (obj) => {
 
 
         Object.entries(replaceData).forEach(([key, val]) => {
-            
+
             if (['Sign In Date', "Date of Birth"].includes(val)) {
                 if (obj[val]) {
                     modifiedObj[key] = convertToISODate(obj[val]);
@@ -1537,6 +1540,7 @@ const sapratePropertyandTenantData = async (arr) => {
                     tenObj['property'] = newProperty?._id || null
                     proObj['_id'] = newProperty?._id || null
                 } else {
+                    await Property.findByIdAndUpdate(isPropertyExist?._id, { isDeleted: 0, status: 0 })
                     tenObj['property'] = isPropertyExist?._id || null
                     proObj['_id'] = isPropertyExist?._id || null
                 }
@@ -1568,12 +1572,14 @@ export const importExistingTenant = async (req, res) => {
             return { ...modifiedObj, addedByModel, addedByRole, addedBy }
         })
         // console.log('obj', modifiedData);
-        
+
         let finalData = await Promise.all(modifiedData)
         let { tenantData, propertydata } = await sapratePropertyandTenantData(finalData)
         for (const tenObj of tenantData) {
             if (tenObj?.property) {
-                let tenant = new Tenants({ ...tenObj, approved_status: 1, isSignOut: 0, status: 0 })
+                // console.log(tenObj.signInDate);
+
+                let tenant = new Tenants({ ...tenObj, isDeleted: 0, approved_status: 1, isSignOut: 0, status: 0, signOutDate: null, endDate: null })
                 let newtenant = await tenant.save()
                 // console.log(newtenant?._id);
                 if (['User'].includes(addedByModel) && tenObj?.property && newtenant?._id) {
@@ -1582,6 +1588,7 @@ export const importExistingTenant = async (req, res) => {
                         [
                             {
                                 $set: {
+                                    isDeleted: 0,
                                     tenants: {
                                         $cond: {
                                             if: {
@@ -1798,9 +1805,107 @@ export const ExportNotActiveTenants = async (req, res) => {
 
         // Send the buffer as a response
     } catch (error) {
-        console.log(error);
 
         res.status(500).json({
+            success: false,
+            message: 'Failed to fetch tenants',
+            error: error.message
+        });
+    }
+}
+
+
+export const HandleSendEmailToAgent = async (req, res) => {
+    try {
+        let { _id, status, email } = req.query;
+        if (!isObjectIdOrHexString(_id) || !_id) {
+            return res.send({ message: 'invalid Agent data.', success: false })
+        }
+
+        let tenants;
+        if (status == 1) {
+            tenants = await handleActiveTenants(_id)
+        } else {
+            tenants = await handleNotActiveTenants(_id)
+        }
+
+
+        if (tenants.length == 0) {
+            return res.send({ message: 'No tenants available', success: false, severity: 'error' })
+        }
+
+        let replaceKeys = {
+            createdAt: 'Created At',
+            addedBy: 'Added By',
+            rslTypeGroup: "Rsl",
+            propertyAddress: 'Property Address',
+            area: "Area Name",
+            city: "City",
+            postCode: "Postcode",
+            bedrooms: "Number of Bedrooms in Property",
+            basicRent: "Basic Rent",
+            serviceCharges: "Service Charges",
+            eligibleRent: "eligible Rent",
+            ineligibleCharge: "weekly eligible Charge",
+            sharedWithOther: "Bedroom sharedWithOther",
+            firstName: "First Name",
+            middleName: "Middle Name",
+            lastName: "Surname",
+            room: "Room",
+            dateOfBirth: "Date of Birth",
+            nationalInsuranceNumber: "NINO",
+            claimReferenceNumber: "Claim Reference No",
+            signInDate: "Sign In Date"
+        }
+
+        let buffer = await generateExcelFile(tenants, replaceKeys)
+
+        let attachment = {
+            filename: status == 1 ? 'Active Tenants List' : 'Not-Active Tenants List',
+            content: buffer,
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: email,
+            subject: status == 1 ? 'Active Tenants List' : 'Not-Active Tenants List',
+            attachments: [{ ...attachment }],
+        };
+
+        let info = await sendMail(mailOptions);
+        const log = new EmailLog({
+            userId: _id,
+            subject: mailOptions?.subject,
+            body: 'Email Sent',
+            attachments: mailOptions?.attachments.map(attachment => attachment.filename).join(', '),
+            emailTo: mailOptions?.to,
+            emailCC: '',
+        });
+        await log.save();
+        if (info?.success == false) {
+            return res.send({ message: `somethig went wrong while sending to ${email}`, success: false })
+        }
+        return res.send({ message: `Email Sended to ${email}`, success: true })
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch tenants',
+            error: error.message
+        });
+    }
+}
+
+
+export const HandleDeleteExportedData = async (req, res) => {
+    try {
+        let { _ids, userId } = req.body
+        // console.log(req.body);
+        let result = await handleDeleteExportedData(_ids, userId)
+        return res.send({ message: 'Data deleted Successfully', success: true })
+    } catch (error) {
+        return res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',
             error: error.message

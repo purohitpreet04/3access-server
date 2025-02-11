@@ -274,7 +274,7 @@ const TenantSchema = new Schema({
   relationship: { type: String, default: '' },
   reason: { type: String, default: '' },
   from: { type: Date },
-  signOutDate: { type: Date, default: Date.now() },
+  signOutDate: { type: Date, default: null },
   to: { type: Date },
   noOfSavings: { type: String, default: '' },
   borrowingMoneyFromFamily: { type: String, default: '' },
@@ -365,6 +365,7 @@ const TenantSchema = new Schema({
   Next_HB_payment_amount: { type: String, default: '' },
   Housing_benefit_weekly_amount: { type: String, default: '' },
   sts_Str: { type: String, default: '' },
+  isDeleted: { type: Number, default: 0 },
 }, {
   timestamps: true
 });

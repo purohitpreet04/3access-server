@@ -93,6 +93,8 @@ export const getAllProperty = async (req, res) => {
             query = {
                 $and: [
                     { status: 0 },
+                    { isDeleted: 0 },
+
                     searchConditions,
                     {
                         $or: [
@@ -119,6 +121,7 @@ export const getAllProperty = async (req, res) => {
             query = {
                 visibleTo: { $in: _id },
                 status: 0,
+                isDeleted: 0,
                 $or: [
                     // {visibleTo: { $in: _id }},
                     searchConditions,
@@ -265,7 +268,7 @@ export const getAllpropertyforTenants = async (req, res) => {
             query = {
                 $and: [
                     { status: 0 },
-                    // searchConditions,
+                    { isDeleted: 0 },
                     {
                         $or: [
                             { addedBy: _id },
@@ -286,6 +289,7 @@ export const getAllpropertyforTenants = async (req, res) => {
                     // {visibleTo: { $in: _id }},
                     // searchConditions,
                     { status: 0 },
+                    { isDeleted: 0 },
                     { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };
@@ -296,7 +300,7 @@ export const getAllpropertyforTenants = async (req, res) => {
 
         const addresses = properties.map((pro) => {
             return (
-                { address: `${pro.address}, ${pro.area}, ${pro.city}`, _id: pro._id, rooms: pro.bedrooms, rsl:pro?.rslTypeGroup }
+                { address: `${pro.address}, ${pro.area}, ${pro.city}`, _id: pro._id, rooms: pro.bedrooms, rsl: pro?.rslTypeGroup }
             )
         })
 

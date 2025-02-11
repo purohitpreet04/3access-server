@@ -200,7 +200,8 @@ const propertySchema = new mongoose.Schema({
         endDate: { type: Date },
         lastsignoutdate: { type: Date }
     }],
-    status: { type: Number, default: 0 }
+    status: { type: Number, default: 0 },
+    isDeleted: { type: Number, default: 0 },
 }, { timestamps: true });
 const Property = mongoose.model('properties', propertySchema);
 

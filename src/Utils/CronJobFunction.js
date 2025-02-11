@@ -7,6 +7,7 @@ import { chunkArray, generateExcelFile, writeLog } from "./CommonFunctions.js";
 import sendMail from "./email.service.js";
 import CheckStatus from "./Sracper.js";
 import fs from 'fs';
+import { handleNotActiveTenants } from "../Models/TenantModal.js";
 
 // export const checkTenatStatus = async () => {
 //     try {
@@ -71,7 +72,7 @@ export const checkTenatStatus = async () => {
         }).populate({
             path: 'property',
             select: 'postCode'
-        }).limit(15)
+        }).limit()
             .lean()
             .sort({ createdAt: -1 })
             .exec();
@@ -83,18 +84,18 @@ export const checkTenatStatus = async () => {
         let bulkUpdates = [];
         for (let Chunk of splitarray) {
             for (let TenUser of Chunk) {
-                    const res = await CheckStatus(TenUser);
-                    let date = new Date();
-                    if (res?.error) {
-                        const logMessage = `[${date.toISOString()}] ${TenUser.firstName || ''} ${TenUser?.middleName || ''} ${TenUser.lastName || ''} | NINO: ${TenUser.nationalInsuranceNumber || ''} | Claim Ref: ${TenUser.claimReferenceNumber || "No"} | Error: ${res.error}`;
-                        writeLog(logMessage);
+                const res = await CheckStatus(TenUser);
+                let date = new Date();
+                if (res?.error) {
+                    const logMessage = `[${date.toISOString()}] ${TenUser.firstName || ''} ${TenUser?.middleName || ''} ${TenUser.lastName || ''} | NINO: ${TenUser.nationalInsuranceNumber || ''} | Claim Ref: ${TenUser.claimReferenceNumber || "No"} | Error: ${res.error}`;
+                    writeLog(logMessage);
+                }
+                bulkUpdates.push({
+                    updateOne: {
+                        filter: { _id: TenUser._id },
+                        update: { $set: { ...res } }
                     }
-                    bulkUpdates.push({
-                        updateOne: {
-                            filter: { _id: TenUser._id },
-                            update: { $set: { ...res } }
-                        }
-                    });
+                });
             }
         }
         if (bulkUpdates.length > 0) {
@@ -112,8 +113,6 @@ export default checkTenatStatus
 
 export const handleSendEmail = async () => {
     try {
-
-        console.log('bhbbjbhjbb ');
 
         let agents = await user.find({ role: 'agent', status: 1, sendEmail: 1 }).lean().exec();
         if (agents.length === 0) {
@@ -184,79 +183,7 @@ export const handleSendEmail = async () => {
 }
 
 
-const handleNotActiveTenants = async (_id) => {
-    let query = {};
-    const staffMembers = await Staff.find({ addedBy: _id }).select('_id').lean();
-    const staffIds = staffMembers.map(staff => staff._id);
 
-    query = {
-        $and: [
-            { status: 0 },
-            { isSignOut: 0 },
-            {
-                $or: [
-                    { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'User' },
-                    { addedBy: { $in: staffIds }, addedByModel: 'Staff' }
-                ]
-            }
-        ]
-    };
-
-    const tenants = await Tenants.aggregate([
-        { $match: query },
-        {
-            $lookup: {
-                from: 'properties',
-                localField: 'property',
-                foreignField: '_id',
-                as: 'propertyDetails'
-            }
-        },
-        {
-            $lookup: {
-                from: 'rsls',
-                localField: 'propertyDetails.rslTypeGroup',
-                foreignField: '_id',
-                as: 'companyDetails'
-            }
-        },
-        { $unwind: { path: "$propertyDetails", preserveNullAndEmptyArrays: true } },
-        {
-            $project: {
-                status: {
-                    $cond: { if: { $eq: ["$status", 1] }, then: "active", else: "not-active" }
-                },
-                status: 1,
-                "addedBy": '$addedBy',
-                "firstName": "$firstName",
-                "lastName": "$lastName",
-                "middleName": "$middleName",
-                "dateOfBirth": "$dateOfBirth",
-                addedByModel: 1,
-                "room": "$room",
-                "signInDate": "$signInDate",
-                "createdAt": "$createdAt",
-                "claimReferenceNumber": "$claimReferenceNumber",
-                'nationalInsuranceNumber': "$nationalInsuranceNumber",
-                "propertyAddress": '$propertyDetails.address',
-                "area": '$propertyDetails.area',
-                "city": '$propertyDetails.city',
-                "bedrooms": '$propertyDetails.bedrooms',
-                "basicRent": '$propertyDetails.basicRent',
-                postCode: '$propertyDetails.postCode',
-                serviceCharges: '$propertyDetails.serviceCharges',
-                eligibleRent: '$propertyDetails.eligibleRent',
-                ineligibleCharge: '$propertyDetails.ineligibleCharge',
-                sharedWithOther: '$propertyDetails.sharedWithOther',
-                'rslTypeGroup': { $arrayElemAt: ['$companyDetails.companyname', 0] },
-            }
-        },
-    ]);
-
-
-    return tenants;
-
-}
 
 export const testTenants = async () => {
 
@@ -266,6 +193,7 @@ export const testTenants = async () => {
             addedBy: new mongoose.Types.ObjectId('679392a8ec423baaaf062792'),
             checked: 0,
             approved_status: 1,
+            isDeleted: 0,
             isSignOut: 0,
             claimReferenceNumber: { $ne: '' },
             nationalInsuranceNumber: { $ne: '' },
@@ -283,7 +211,7 @@ export const testTenants = async () => {
         }).populate({
             path: 'property',
             select: 'postCode'
-        }).limit(10)
+        }).limit()
             .lean()
             .exec()
 
@@ -317,9 +245,10 @@ export const testTenants = async () => {
                 }
             }
         }
-        if (bulkUpdates.length > 0) {
+        // if (bulkUpdates.length > 0) {
             await Tenants.bulkWrite(bulkUpdates);
-        }
+            console.log('updated', bulkUpdates.length)
+        // }
 
     } catch (error) {
         console.log('error in cron job');
