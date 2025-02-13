@@ -24,18 +24,7 @@ const sendMail = async ({ from, to, subject, text, html, attachments = [], cc, r
   }
 
   try {
-    // Validate email formats (basic validation)
-    // const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-
-    // if (!emailRegex.test(from)) {
-    //   return { success: false, message: 'Invalid sender email format' };
-    // }
-
-    // if (!emailRegex.test(to)) {
-    //   return { success: false, message: 'Invalid recipient email format' };
-    // }
-
-    // Create transporter
+  
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT, 10),

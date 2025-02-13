@@ -24,177 +24,233 @@ import moment from "moment";
 import { handleActiveTenants, handleBulkDeleteData, handleDeleteExportedData, handleNotActiveTenants } from "../Models/TenantModal.js";
 // const workerPool = new WorkerPool(3);
 
+// export const AddTenants = async (req, res) => {
+//     try {
+//         const { _id, property, room, ...data } = req.body;
+//         // let rentproperty = await Property.findById(property).lean();
+//         if (!data?.firstName || !data?.lastName) {
+//             return res.status(400).json({ success: false, message: 'First name and last name are required for the tenant' });
+//         }
+//         const [rentproperty, existingTenant] = await Promise.all([
+//             Property.findById(property).lean(),
+//             Tenants.findOne({ isSignOut: 0, room, property, }).lean(),
+//             // Template.find({ rsl: rentproperty?.rslTypeGroup }).lean(),
+//         ]);
+
+//         let tenant;
+//         if (_id) {
+//             tenant = await Tenants.findByIdAndUpdate(_id, data, { new: true, upsert: true });
+//             if (!tenant) {
+//                 return res.status(404).json({ success: false, message: 'Tenant not found to update' });
+//             } else {
+//                 await logUserAction(data?.addedBy, 'EDIT', {
+//                     fname: data?.firstName,
+//                     lname: data?.lastName,
+//                     room: room,
+//                     address: rentproperty?.address,
+//                     area: rentproperty?.area,
+//                     city: rentproperty?.city,
+//                     postCode: rentproperty?.postCode
+//                 }, 'Tenant', _id, req.query.addedByModel);
+//                 return res.status(200).json({ success: true, message: 'Tenant updated' });
+//             }
+//         } else {
+
+
+//             if (!property) {
+//                 return res.status(400).json({ success: false, message: 'Property ID is required' });
+//             }
+
+//             let modifiedData = await UploaadBase64ToS3(data)
+
+//             tenant = new Tenants({ ...modifiedData, property, room });
+//             const newTenant = await tenant.save();
+//             console.error('tenant addedd...');
+            
+//             // return res.status(201).json({
+//             //     success: true,
+//             // });
+//             await logUserAction(data?.addedBy, 'ADD', {
+//                 fname: data?.firstName,
+//                 lname: data?.lastName,
+//                 room: room,
+//                 councilTaxPayer: rentproperty.councilTaxPayer,
+//                 address: rentproperty?.address,
+//                 area: rentproperty?.area,
+//                 city: rentproperty?.city,
+//                 postCode: rentproperty?.postCode
+//             }, 'Tenant', newTenant?._id, req.query.addedByModel);
+//             // console.log('tenant addedd...');
+//             if (data?.tenantSignupEmail && ['User'].includes(req.query.addedByModel) && data?.approved_status == 1) {
+//                 let userData = {}
+//                 let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city').lean()
+//                 if (['company-agent', 'staff'].includes(data?.addedByRole)) {
+//                     let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean()
+//                     userData = { user_id: staffdata?.addedBy?._id, ...staffdata?.addedBy, ...rslData }
+//                 } else {
+//                     let agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean()
+//                     userData = { user_id: agentData?._id, ...agentData, ...rslData }
+//                 }
+//                 const pdfTemplates = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
+//                 const attachmentsArray = await Promise.all(
+//                     pdfTemplates.map(async (pdfTemplet) => {
+//                         const pdfBuffer = await GeneratePdf(pdfTemplet?._id, newTenant?._id);
+//                         return {
+//                             filename: pdfTemplet?.name,
+//                             content: pdfBuffer,
+//                             contentType: 'application/pdf',
+//                         };
+//                     })
+//                 );
+//                 console.error('pdf generated');
+//                 const mailObj = {
+//                     replyTo: userData?.emailto,
+//                     to: data?.tenantSignupEmail,
+//                     bcc: userData?.emailcc,
+//                     subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} 
+//                 ${newTenant?.middleName || ''} ${newTenant?.lastName || ''},
+//                 ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
+//                     html: EmailTempelates("new_tanant",
+//                         {
+//                             newTenant,
+//                             address: rentproperty?.address,
+//                             area: rentproperty?.area,
+//                             city: rentproperty?.city,
+//                             postCode: rentproperty?.postCode
+//                         }),
+//                     attachments: [...attachmentsArray],
+//                 };
+//                 await sendMail(mailObj);
+//                 const log = new EmailLog({
+//                     userId: ['company-agent', 'staff'].includes(data?.addedByRole) ? userData?.user_id : userData?.user_id,
+//                     subject: mailObj?.subject,
+//                     body: mailObj?.html,
+//                     attachments: mailObj?.attachments.map(attachment => attachment.filename).join(', '),
+//                     emailTo: mailObj?.to,
+//                     emailCC: mailObj?.bcc,
+//                 });
+//                 await log.save();
+//             }
+//         }
+//         if ((['User'].includes(req.query.addedByModel) && data?.approved_status == 1) && property && tenant._id) {
+//             if (!rentproperty) {
+//                 return res.status(404).json({ success: false, message: 'Property not found' });
+//             }
+//             await Property.updateOne(
+//                 { _id: property },
+//                 [
+//                     {
+//                         $set: {
+//                             tenants: {
+//                                 $cond: {
+//                                     if: {
+//                                         $anyElementTrue: {
+//                                             $map: {
+//                                                 input: "$tenants",
+//                                                 as: "tenant",
+//                                                 in: { $eq: ["$$tenant.roomNo", room] },
+//                                             },
+//                                         },
+//                                     },
+//                                     then: {
+//                                         $map: {
+//                                             input: "$tenants",
+//                                             as: "tenant",
+//                                             in: {
+//                                                 $cond: [
+//                                                     { $eq: ["$$tenant.roomNo", room] },
+//                                                     {
+//                                                         $mergeObjects: [
+//                                                             "$$tenant",
+//                                                             {
+//                                                                 tenant_id: tenant._id,
+//                                                                 signInDate: data.signInDate,
+//                                                                 endDate: data.endDate,
+//                                                             },
+//                                                         ],
+//                                                     },
+//                                                     "$$tenant",
+//                                                 ],
+//                                             },
+//                                         },
+//                                     },
+//                                     else: {
+//                                         $concatArrays: [
+//                                             "$tenants",
+//                                             [
+//                                                 {
+//                                                     tenant_id: tenant._id,
+//                                                     roomNo: parseInt(room),
+//                                                     signInDate: data.signInDate,
+//                                                     endDate: data.endDate,
+//                                                 },
+//                                             ],
+//                                         ],
+//                                     },
+//                                 },
+//                             },
+//                         },
+//                     },
+//                 ]
+//             );
+//         }
+//         res.status(200).json({
+//             success: true,
+//         });
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({
+//             success: false,
+//             message: 'Failed to add or update tenant',
+//             error: error.message || 'Internal server error',
+//         });
+//     }
+// };
+
 export const AddTenants = async (req, res) => {
     try {
         const { _id, property, room, ...data } = req.body;
-        // let rentproperty = await Property.findById(property).lean();
+
         if (!data?.firstName || !data?.lastName) {
             return res.status(400).json({ success: false, message: 'First name and last name are required for the tenant' });
         }
+
+        // Get property and check if tenant already exists in the room
         const [rentproperty, existingTenant] = await Promise.all([
             Property.findById(property).lean(),
-            Tenants.findOne({ isSignOut: 0, room, property, }).lean(),
-            // Template.find({ rsl: rentproperty?.rslTypeGroup }).lean(),
+            Tenants.findOne({ isSignOut: 0, room, property }).lean()
         ]);
 
-        let tenant;
+        if (!rentproperty) {
+            return res.status(404).json({ success: false, message: 'Property not found' });
+        }
+
+        // Handle tenant update
         if (_id) {
-            tenant = await Tenants.findByIdAndUpdate(_id, data, { new: true, upsert: true });
-            if (!tenant) {
-                return res.status(404).json({ success: false, message: 'Tenant not found to update' });
-            } else {
-                await logUserAction(data?.addedBy, 'EDIT', {
-                    fname: data?.firstName,
-                    lname: data?.lastName,
-                    room: room,
-                    address: rentproperty?.address,
-                    area: rentproperty?.area,
-                    city: rentproperty?.city,
-                    postCode: rentproperty?.postCode
-                }, 'Tenant', _id, req.query.addedByModel);
-                return res.status(200).json({ success: true, message: 'Tenant updated' });
-            }
-        } else {
-
-
-            if (!property) {
-                return res.status(400).json({ success: false, message: 'Property ID is required' });
-            }
-
-            let modifiedData = await UploaadBase64ToS3(data)
-
-            tenant = new Tenants({ ...modifiedData, property, room });
-            const newTenant = await tenant.save();
-
-            // return res.status(201).json({
-            //     success: true,
-            // });
-            await logUserAction(data?.addedBy, 'ADD', {
-                fname: data?.firstName,
-                lname: data?.lastName,
-                room: room,
-                councilTaxPayer: rentproperty.councilTaxPayer,
-                address: rentproperty?.address,
-                area: rentproperty?.area,
-                city: rentproperty?.city,
-                postCode: rentproperty?.postCode
-            }, 'Tenant', newTenant?._id, req.query.addedByModel);
-
-            if (data?.tenantSignupEmail && ['User'].includes(req.query.addedByModel) && data?.approved_status == 1) {
-                let userData = {}
-                let rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city').lean()
-                if (['company-agent', 'staff'].includes(data?.addedByRole)) {
-                    let staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean()
-                    userData = { user_id: staffdata?.addedBy?._id, ...staffdata?.addedBy, ...rslData }
-                } else {
-                    let agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean()
-                    userData = { user_id: agentData?._id, ...agentData, ...rslData }
-                }
-                const pdfTemplates = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) })
-                const attachmentsArray = await Promise.all(
-                    pdfTemplates.map(async (pdfTemplet) => {
-                        const pdfBuffer = await GeneratePdf(pdfTemplet?._id, newTenant?._id);
-                        return {
-                            filename: pdfTemplet?.name,
-                            content: pdfBuffer,
-                            contentType: 'application/pdf',
-                        };
-                    })
-                );
-                const mailObj = {
-                    replyTo: userData?.emailto,
-                    to: data?.tenantSignupEmail,
-                    bcc: userData?.emailcc,
-                    subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} 
-                ${newTenant?.middleName || ''} ${newTenant?.lastName || ''},
-                ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, ${getDate(newTenant?.dateOfBirth)}, Housing Benefit Form`,
-                    html: EmailTempelates("new_tanant",
-                        {
-                            newTenant,
-                            address: rentproperty?.address,
-                            area: rentproperty?.area,
-                            city: rentproperty?.city,
-                            postCode: rentproperty?.postCode
-                        }),
-                    attachments: [...attachmentsArray],
-                };
-                await sendMail(mailObj);
-                const log = new EmailLog({
-                    userId: ['company-agent', 'staff'].includes(data?.addedByRole) ? userData?.user_id : userData?.user_id,
-                    subject: mailObj?.subject,
-                    body: mailObj?.html,
-                    attachments: mailObj?.attachments.map(attachment => attachment.filename).join(', '),
-                    emailTo: mailObj?.to,
-                    emailCC: mailObj?.bcc,
-                });
-                await log.save();
-            }
+            return await handleTenantUpdate(data, room, property, _id, rentproperty, req, res);
         }
-        if ((['User'].includes(req.query.addedByModel) && data?.approved_status == 1) && property && tenant._id) {
-            if (!rentproperty) {
-                return res.status(404).json({ success: false, message: 'Property not found' });
-            }
-            await Property.updateOne(
-                { _id: property },
-                [
-                    {
-                        $set: {
-                            tenants: {
-                                $cond: {
-                                    if: {
-                                        $anyElementTrue: {
-                                            $map: {
-                                                input: "$tenants",
-                                                as: "tenant",
-                                                in: { $eq: ["$$tenant.roomNo", room] },
-                                            },
-                                        },
-                                    },
-                                    then: {
-                                        $map: {
-                                            input: "$tenants",
-                                            as: "tenant",
-                                            in: {
-                                                $cond: [
-                                                    { $eq: ["$$tenant.roomNo", room] },
-                                                    {
-                                                        $mergeObjects: [
-                                                            "$$tenant",
-                                                            {
-                                                                tenant_id: tenant._id,
-                                                                signInDate: data.signInDate,
-                                                                endDate: data.endDate,
-                                                            },
-                                                        ],
-                                                    },
-                                                    "$$tenant",
-                                                ],
-                                            },
-                                        },
-                                    },
-                                    else: {
-                                        $concatArrays: [
-                                            "$tenants",
-                                            [
-                                                {
-                                                    tenant_id: tenant._id,
-                                                    roomNo: parseInt(room),
-                                                    signInDate: data.signInDate,
-                                                    endDate: data.endDate,
-                                                },
-                                            ],
-                                        ],
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ]
-            );
+
+        // Handle tenant creation
+        if (!property) {
+            return res.status(400).json({ success: false, message: 'Property ID is required' });
         }
-        res.status(200).json({
-            success: true,
-        });
+
+        let modifiedData = await UploaadBase64ToS3(data);
+        const tenant = new Tenants({ ...modifiedData, property, room });
+        const newTenant = await tenant.save();
+
+        await logUserAction(data?.addedBy, 'ADD', createTenantLogData(rentproperty, newTenant, room, data), 'Tenant', newTenant?._id, req.query.addedByModel);
+
+        // Send email if tenant email is provided and status is approved
+        if (data?.tenantSignupEmail && ['User'].includes(req.query.addedByModel) && data?.approved_status == 1) {
+            await handleTenantEmail(newTenant, rentproperty, data, req, res);
+        }
+
+        // Update property tenants with new tenant info
+        await updatePropertyTenants(rentproperty, property, tenant, room, data);
+
+        res.status(200).json({ success: true });
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -204,6 +260,161 @@ export const AddTenants = async (req, res) => {
         });
     }
 };
+
+// Handle tenant update logic
+async function handleTenantUpdate(data, room, property, _id, rentproperty, req, res) {
+    const tenant = await Tenants.findByIdAndUpdate(_id, data, { new: true, upsert: true });
+
+    if (!tenant) {
+        return res.status(404).json({ success: false, message: 'Tenant not found to update' });
+    }
+
+    await logUserAction(data?.addedBy, 'EDIT', createTenantLogData(rentproperty, tenant, room, data), 'Tenant', _id, req.query.addedByModel);
+
+    return res.status(200).json({ success: true, message: 'Tenant updated' });
+}
+
+// Create log data for tenant actions
+function createTenantLogData(rentproperty, tenant, room, data) {
+    return {
+        fname: data?.firstName,
+        lname: data?.lastName,
+        room: room,
+        address: rentproperty?.address,
+        area: rentproperty?.area,
+        city: rentproperty?.city,
+        postCode: rentproperty?.postCode
+    };
+}
+
+// Handle tenant email logic
+async function handleTenantEmail(newTenant, rentproperty, data, req, res) {
+    let userData = await getUserDataForEmail(data, rentproperty);
+    const pdfTemplates = await Template.find({ rsl: new mongoose.Types.ObjectId(rentproperty?.rslTypeGroup) });
+
+    const attachmentsArray = await Promise.all(pdfTemplates.map(async (pdfTemplet) => {
+        const pdfBuffer = await GeneratePdf(pdfTemplet?._id, newTenant?._id);
+        return {
+            filename: pdfTemplet?.name,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+        };
+    }));
+
+    const mailObj = createTenantEmail(newTenant, rentproperty, userData, attachmentsArray);
+    await sendMail(mailObj);
+
+    await logEmail(mailObj);
+}
+
+// Get user data for sending the email
+async function getUserDataForEmail(data, rentproperty) {
+    let userData = {};
+    const rslData = await RSL.findById(rentproperty?.rslTypeGroup).select('companyname address area city').lean();
+
+    if (['company-agent', 'staff'].includes(data?.addedByRole)) {
+        const staffdata = await Staff.findById(data?.addedBy).populate({ path: 'addedBy', select: 'emailcc emailto' }).lean();
+        userData = { user_id: staffdata?.addedBy?._id, ...staffdata?.addedBy, ...rslData };
+    } else {
+        const agentData = await user.findById(data?.addedBy).select('emailcc emailto').lean();
+        userData = { user_id: agentData?._id, ...agentData, ...rslData };
+    }
+    return userData;
+}
+
+// Create tenant email content
+function createTenantEmail(newTenant, rentproperty, userData, attachmentsArray) {
+    return {
+        replyTo: userData?.emailto,
+        to: newTenant?.tenantSignupEmail,
+        bcc: userData?.emailcc,
+        subject: `New Signup, ${rentproperty?.address}, ${rentproperty?.area}, ${rentproperty?.city}, ${rentproperty?.postCode}, ${newTenant?.firstName || ''} ${newTenant?.middleName || ''} ${newTenant?.lastName || ''}, ${getDate(newTenant?.dateOfBirth)}, ${newTenant?.nationalInsuranceNumber}, Housing Benefit Form`,
+        html: EmailTempelates("new_tanant", {
+            newTenant,
+            address: rentproperty?.address,
+            area: rentproperty?.area,
+            city: rentproperty?.city,
+            postCode: rentproperty?.postCode
+        }),
+        attachments: [...attachmentsArray],
+    };
+}
+
+// Log email action
+async function logEmail(mailObj) {
+    const log = new EmailLog({
+        userId: mailObj?.user_id,
+        subject: mailObj?.subject,
+        body: mailObj?.html,
+        attachments: mailObj?.attachments.map(attachment => attachment.filename).join(', '),
+        emailTo: mailObj?.to,
+        emailCC: mailObj?.bcc,
+    });
+    await log.save();
+}
+
+// Update tenants in the property
+async function updatePropertyTenants(rentproperty, property, tenant, room, data) {
+    await Property.updateOne(
+        { _id: property },
+        [
+            {
+                $set: {
+                    tenants: {
+                        $cond: {
+                            if: {
+                                $anyElementTrue: {
+                                    $map: {
+                                        input: "$tenants",
+                                        as: "tenant",
+                                        in: { $eq: ["$$tenant.roomNo", room] },
+                                    },
+                                },
+                            },
+                            then: {
+                                $map: {
+                                    input: "$tenants",
+                                    as: "tenant",
+                                    in: {
+                                        $cond: [
+                                            { $eq: ["$$tenant.roomNo", room] },
+                                            {
+                                                $mergeObjects: [
+                                                    "$$tenant",
+                                                    {
+                                                        tenant_id: tenant._id,
+                                                        signInDate: data.signInDate,
+                                                        endDate: data.endDate,
+                                                    },
+                                                ],
+                                            },
+                                            "$$tenant",
+                                        ],
+                                    },
+                                },
+                            },
+                            else: {
+                                $concatArrays: [
+                                    "$tenants",
+                                    [
+                                        {
+                                            tenant_id: tenant._id,
+                                            roomNo: parseInt(room),
+                                            signInDate: data.signInDate,
+                                            endDate: data.endDate,
+                                        },
+                                    ],
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
+        ]
+    );
+}
+
+
 
 export const UpdateAssessment = async (req, res) => {
     try {

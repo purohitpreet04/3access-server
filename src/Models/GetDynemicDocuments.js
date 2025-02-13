@@ -223,7 +223,7 @@ export const getDynemicPdf = async (tempid, id, pdf, otherData, assessment_id) =
         // }
 
     } catch (error) {
-        console.log('error in getDynemicPdf', error)
+        console.log('error in getDynemicPdf')
     }
 
 }

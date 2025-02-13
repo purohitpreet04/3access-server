@@ -35,6 +35,7 @@ export const GeneratePdf = async (type, id, data, assessment_id) => {
             const pdfBuffer = await page.pdf({
                 format: 'A4',
                 printBackground: true,
+                timeout: 30000,
                 margin: {
                     top: '50mm',
                     bottom: '20mm',
@@ -57,6 +58,8 @@ export const GeneratePdf = async (type, id, data, assessment_id) => {
             });
 
             await browser.close();
+          
+            
             resolve(pdfBuffer);
         } catch (error) {
             reject({});
