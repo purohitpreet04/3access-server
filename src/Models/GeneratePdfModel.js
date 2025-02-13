@@ -3,7 +3,10 @@ import puppeteer from "puppeteer";
 import Property from "../DB/Schema/PropertySchema.js";
 import user from "../DB/Schema/userSchema.js";
 import RSL from "../DB/Schema/RSLSchema.js";
+import { Builder, By, until } from 'selenium-webdriver';
+import chrome from 'selenium-webdriver/chrome.js';
 
+//using puppeteer
 export const GeneratePdf = async (type, id, data, assessment_id) => {
     let browser = null;
     return new Promise(async (resolve, reject) => {
@@ -56,12 +59,11 @@ export const GeneratePdf = async (type, id, data, assessment_id) => {
             await browser.close();
             resolve(pdfBuffer);
         } catch (error) {
-            reject(new Error(`PDF generation failed: ${error.message}`));
+            reject({});
         } finally {
             if (browser) {
                 await browser.close();
             }
         }
     })
-
 };

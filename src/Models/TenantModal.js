@@ -204,7 +204,77 @@ export const handleDeleteExportedData = async (ids = [], userId) => {
 
         return deleteData; // Optional: return deleted data for logging or confirmation
     } catch (error) {
-        console.error('Error in handleDeleteExportedData:', error);
-        throw error; // Rethrow error if needed for further handling
+        console.error('Error in handleDeleteExportedData');
+        return null
+        // throw error; // Rethrow error if needed for further handling
     }
 };
+
+
+export const handleBulkDeleteData = async (_id, addedByModal) => {
+    try {
+        let query;
+        let proQuery;
+        if (['User'].includes(addedByModal)) {
+            const staffMembers = await Staff.find({ addedBy: _id }).select('_id').lean();
+            const staffIds = staffMembers.map(staff => staff._id);
+            query = {
+                $and: [
+                    { isSignOut: 0 },
+                    { isDeleted: 0 },
+                    { approved_status: 1 },
+                    {
+                        $or: [
+                            { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'User' },
+                            { addedBy: { $in: staffIds }, addedByModel: 'Staff' }
+                        ]
+                    }
+                ]
+            };
+            proQuery = {
+                $and: [
+
+                    { isDeleted: 0 },
+                    { status: 0 },
+                    {
+                        $or: [
+                            { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'User' },
+                            { addedBy: { $in: staffIds }, addedByModel: 'Staff' }
+                        ]
+                    }
+                ]
+            };
+        } else if (['Staff'].includes(addedByModal)) {
+            const staffMembers = await Staff.findOne({ _id }).select('permission').lean();
+            if (!staffMembers?.permission.includes(5)) {
+                return res.status(403).json({ message: 'Access Denied', success: false });
+            }
+            query = {
+                $and: [
+                    { isSignOut: 0 },
+                    { isDeleted: 0 },
+                    { approved_status: 1 },
+                    { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
+                ]
+            };
+            proQuery = {
+                $and: [
+                    { isDeleted: 0 },
+                    { status: 0 },
+                    { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
+                ]
+            };
+        } else {
+            return res.status(403).json({ message: 'Access Denied' });
+        }
+
+        let updatedTenants = await Tenants.updateMany(query, { isDeleted: 1 })
+        let updateProperty = await Property.updateMany(proQuery, { $set: { isDeleted: 1, tenants: [] } })
+
+        return { updatedTenants, updateProperty }
+
+    } catch (error) {
+        console.error('Error in handleBulkDeleteData');
+        return null
+    }
+}

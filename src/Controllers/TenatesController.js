@@ -21,7 +21,7 @@ import { s3 } from "../Utils/s3.js";
 import bcrypt from 'bcryptjs';
 import XLSX from 'xlsx';
 import moment from "moment";
-import { handleActiveTenants, handleDeleteExportedData, handleNotActiveTenants } from "../Models/TenantModal.js";
+import { handleActiveTenants, handleBulkDeleteData, handleDeleteExportedData, handleNotActiveTenants } from "../Models/TenantModal.js";
 // const workerPool = new WorkerPool(3);
 
 export const AddTenants = async (req, res) => {
@@ -65,6 +65,10 @@ export const AddTenants = async (req, res) => {
 
             tenant = new Tenants({ ...modifiedData, property, room });
             const newTenant = await tenant.save();
+
+            // return res.status(201).json({
+            //     success: true,
+            // });
             await logUserAction(data?.addedBy, 'ADD', {
                 fname: data?.firstName,
                 lname: data?.lastName,
@@ -1548,9 +1552,7 @@ const sapratePropertyandTenantData = async (arr) => {
             propertydata.push(proObj)
             tenantData.push(tenObj)
         }
-
         return { tenantData, propertydata }
-
     } catch (error) {
         console.log('error in sapratePropertyandTenantData func', error);
     }
@@ -1670,6 +1672,7 @@ export const ExportNotActiveTenants = async (req, res) => {
                 $and: [
                     { status: 0 },
                     { isSignOut: 0 },
+                    { isDeleted: 0 },
                     {
                         $or: [
                             { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'User' },
@@ -1688,6 +1691,7 @@ export const ExportNotActiveTenants = async (req, res) => {
                 $and: [
                     { isSignOut: 0 },
                     { status: 0 },
+                    { isDeleted: 0 },
                     { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
                 ]
             };
@@ -1903,7 +1907,33 @@ export const HandleDeleteExportedData = async (req, res) => {
         let { _ids, userId } = req.body
         // console.log(req.body);
         let result = await handleDeleteExportedData(_ids, userId)
+        if (!result) {
+            return res.send({ message: 'Failed to delete data', success: false })
+        }
         return res.send({ message: 'Data deleted Successfully', success: true })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch tenants',
+            error: error.message
+        });
+    }
+}
+
+
+export const HandleBulkDelete = async (req, res) => {
+    try {
+        const { _id, addedByModal } = req.query
+
+        if (!isObjectIdOrHexString(_id) || !_id) {
+            return res.send({ message: 'invalid Agent data.', success: false })
+        }
+        let result = await handleBulkDeleteData(_id, addedByModal)
+        if (!result) {
+            return res.send({ message: 'Failed to delete data', success: false })
+        }
+        return res.status(200).send({ message: 'Data deleted Successfully', success: true })
+
     } catch (error) {
         return res.status(500).json({
             success: false,
