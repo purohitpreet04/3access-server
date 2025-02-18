@@ -51,7 +51,6 @@ export const GetallProperty = async (req, res) => {
                 $or: [
                     // {visibleTo: { $in: _id }},
                     searchConditions,
-
                     { addedBy: _id, addedByModel: 'Staff', ...otherQuery }
                 ]
             };
@@ -62,7 +61,7 @@ export const GetallProperty = async (req, res) => {
         const properties = await Property.find(query)
             .populate({
                 path: 'tenants.tenant_id',
-                select: 'lastName firstName isSignOut claimReferenceNumber bedrooms signOutDate status',
+                select: 'lastName middleName firstName dateOfBirth isSignOut claimReferenceNumber room signOutDate status assesment signInDate signOutDate gender nationalInsuranceNumber claimReferenceNumber endDate ',
                 match: { approved_status: 1, isSignOut: 0 }
             })
             .populate({ path: 'addedBy', select: 'fname lname companyname role addedBy' })
@@ -76,53 +75,64 @@ export const GetallProperty = async (req, res) => {
                 message: 'No properties found',
             });
         }
+        // console.log(properties);
+
         let totalRooms = properties.reduce((acc, cur) => acc + cur.bedrooms, 0);
         let totalProperty = properties.length;
         let activeTenants = properties.reduce((acc, cur) => acc + cur.tenants.filter(tenant => tenant.tenant_id).length, 0);
         let voidRooms = totalRooms - activeTenants
         // let voidRooms = properties.reduce((acc, cur) => acc + cur.tenants.filter(tenant => !tenant.tenant_id).length, 0);
         // console.log(totalRooms)
-        const formattedProperties = await Promise.all(properties.map(async (property) => {
-            // totalRooms = totalRooms += property.bedrooms
-            // property.tenants.forEach(tenant => {
-            //     if (tenant.isSignOut === 0) {
-            //         activeTenants++
-            //     }
-            // })
-            const roomObject = {};  // Object to hold rooms by room number
-            for (let i = 1; i <= property.bedrooms; i++) {
-                roomObject[`room${i}`] = {}
-                property.tenants.forEach(tenant => {
+        // const formattedProperties = await Promise.all(properties.map(async (property) => {
+        //     // totalRooms = totalRooms += property.bedrooms
+        //     // property.tenants.forEach(tenant => {
+        //     //     if (tenant.isSignOut === 0) {
+        //     //         activeTenants++
+        //     //     }
+        //     // })
+        //     const roomObject = {};  // Object to hold rooms by room number
+        //     for (let i = 1; i <= property.bedrooms; i++) {
+        //         roomObject[`room${i}`] = {}
+        //         property.tenants.forEach(tenant => {
+        //             let roomKey = `room${i}`;
+        //             if (tenant?.tenant_id && tenant?.roomNo === i) {
+        //                 roomObject[roomKey] = {
+        //                     tenant_id: tenant.tenant_id,
+        //                     roomNo: tenant.roomNo,
+        //                 };
+        //             } else {
+        //                 if (tenant?.roomNo === i && tenant?.lastsignoutdate) {
+        //                     roomObject[roomKey] = {
+        //                         lastsignoutdate: tenant?.lastsignoutdate,
+        //                         roomNo: tenant.roomNo,
+        //                     };
+        //                 }
+        //             }
+        //         });
+        //     }
 
-                    let roomKey = `room${i}`;
-                    if (tenant?.tenant_id && tenant?.roomNo === i) {
-                        roomObject[roomKey] = {
-                            tenant_id: tenant.tenant_id,
-                            roomNo: tenant.roomNo,
-                        };
-                    } else {
-                        if (tenant?.roomNo === i && tenant?.lastsignoutdate) {
-                            roomObject[roomKey] = {
-                                lastsignoutdate: tenant?.lastsignoutdate,
-                                roomNo: tenant.roomNo,
-                            };
-                        }
-                    }
+        //     return {
+        //         _id: property._id,
+        //         companyname: property?.rslTypeGroup?.companyname,
+        //         address: property?.address,
+        //         ...roomObject,
+        //         addedBy: property?.addedBy,
+        //     }
 
-                });
+        // }));
 
+        let formattedProperties = properties.map((item) => {
+            let obj
+            let { tenants, assesment, status, ...tenData } = item;
+            if (tenants.length > 0) {
+                tenants.forEach((tenObj) => {
+                    status = status == 1 ? "Active" : "Not-Active"
+                    obj = { ...tenData, ...assesment, ...tenObj.tenant_id, status }
+                })
             }
-
-            return {
-                _id: property._id,
-                companyname: property?.rslTypeGroup?.companyname,
-                address: property?.address,
-                ...roomObject,
-                addedBy: property?.addedBy,
-            }
-
-        }));
-
+            return obj
+        })
+        // console.log(formattedProperties)
         const totalProperties = await Property.countDocuments(query);
         // console.log(formattedProperties)
         res.status(200).json({

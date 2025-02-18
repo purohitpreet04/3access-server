@@ -146,6 +146,7 @@ const AssessmentSchema = new Schema({
   ReferredFrom: { type: String, default: '' },
   nextAssessmentDate: { type: Date },
   categories: { type: Object, default: {} },
+  
   // violenceAggression: { type: Boolean, default: false },
   // knownAssociates: { type: Boolean, default: false },
   // hazardsFromOthers: { type: Boolean, default: false },
@@ -168,6 +169,7 @@ const TenantSchema = new Schema({
     required: true,
     enum: ['User', 'Staff']  // Only allow "User" or "Staff" as values
   },
+  refferralAgency:{ type: String, default: '' },
   hasGPInfo: { type: Boolean, default: false },
   homelessHostelSupport: { type: Boolean, default: false },
   affordProperty: { type: Boolean, default: false },
@@ -359,6 +361,7 @@ const TenantSchema = new Schema({
     //2:reject
   },
   error: { type: String, default: '' },
+  recordStatus: { type: String, default: '' },
   checked: { type: String, default: 0 },
   Next_HB_payment_date: { type: Date, },
   Suspended_Date: { type: Date, },

@@ -66,7 +66,7 @@ import { handleActiveTenants, handleBulkDeleteData, handleDeleteExportedData, ha
 //             tenant = new Tenants({ ...modifiedData, property, room });
 //             const newTenant = await tenant.save();
 //             console.error('tenant addedd...');
-            
+
 //             // return res.status(201).json({
 //             //     success: true,
 //             // });
@@ -492,6 +492,7 @@ export const ListTenents = async (req, res) => {
             : {};
 
         let query;
+        let pro_query
         if (fromDate || toDate) {
             searchConditions.$or = [
                 { createdAt: { $gte: new Date(fromDate) } },
@@ -499,7 +500,7 @@ export const ListTenents = async (req, res) => {
             ]
         }
 
-        if (filter != '') {
+        if (filter && filter != '') {
             searchConditions.$or = [
                 { status: Number(filter) }
             ]
@@ -513,13 +514,27 @@ export const ListTenents = async (req, res) => {
                     { isSignOut: 0 },
                     { isDeleted: 0 },
                     { approved_status: 1 },
-                    searchConditions,
+                    { ...searchConditions },
                     {
                         $or: [
                             { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'User' },
                             { addedBy: { $in: staffIds }, addedByModel: 'Staff' }
                         ]
                     }
+                ]
+            };
+
+            pro_query = {
+                $and: [
+                    { status: 0 },
+                    { isDeleted: 0 },
+                    {
+                        $or: [
+                            { addedBy: new mongoose.Types.ObjectId(_id) },
+                            // { rslTypeGroup: _id },
+                            { addedBy: { $in: staffIds }, addedByModel: 'Staff' }
+                        ]
+                    },
                 ]
             };
         } else if (['staff', 'company-agent'].includes(role)) {
@@ -533,8 +548,19 @@ export const ListTenents = async (req, res) => {
                     { isSignOut: 0 },
                     { isDeleted: 0 },
                     { approved_status: 1 },
-                    searchConditions,
+                    { ...searchConditions },
                     { addedBy: new mongoose.Types.ObjectId(_id), addedByModel: 'Staff' }
+                ]
+            };
+
+
+            pro_query = {
+                visibleTo: { $in: _id },
+                status: 0,
+                idDeleted: 0,
+                $or: [
+                    // {visibleTo: { $in: _id }},
+                    { addedBy: _id, addedByModel: 'Staff' }
                 ]
             };
         } else {
@@ -564,6 +590,8 @@ export const ListTenents = async (req, res) => {
                     status: {
                         $cond: { if: { $eq: ["$status", 1] }, then: "active", else: "not-active" }
                     },
+                    recordStatus: 1,
+                    assesment: 1,
                     addedBy: 1,
                     firstName: 1,
                     lastName: 1,
@@ -591,11 +619,13 @@ export const ListTenents = async (req, res) => {
         ]);
         const modifydata = await Promise.all(
             tenants.map(async (item) => {
+                let { _id, ...ass_data } = item.assesment
                 let addedByData;
                 if (['Staff'].includes(item.addedByModel)) {
                     addedByData = await Staff.findOne({ _id: item.addedBy }).select('username _id role').populate({ path: 'addedBy', select: 'role' });
                     return {
                         ...item,
+                        ...ass_data,
                         property: `${item.propertyDetails?.address}, ${item.propertyDetails?.area}, ${item.propertyDetails?.city}`,
                         addedByusername: addedByData?.username,
                         addedbyrole: addedByData?.role,
@@ -606,6 +636,7 @@ export const ListTenents = async (req, res) => {
                     addedByData = await user.findOne({ _id: item.addedBy }).select('username _id role fname lname companyname').populate({ path: 'addedBy', select: 'role' })
                     return {
                         ...item,
+                        ...ass_data,
                         property: `${item.propertyDetails?.address}, ${item.propertyDetails?.area}, ${item.propertyDetails?.city}`,
                         addedByusername: ['company'].includes(addedByData?.role) ? addedByData?.companyname : addedByData.fname + " " + addedByData.lname,
                         addedbyrole: addedByData?.role,
@@ -616,6 +647,42 @@ export const ListTenents = async (req, res) => {
 
             })
         );
+
+        let totalRooms = await Property.aggregate([
+            { $match: pro_query },
+            {
+                $project: {
+                    bedrooms: 1,
+                    totalBedrooms: 1,
+                    tenantsCount: {
+                        $size: {
+                            $filter: {
+                                input: "$tenants",
+                                as: "tenant",
+                                cond: { $ne: ["$$tenant.tenant_id", null] }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalBedrooms: { $sum: "$bedrooms" },
+                    totalTenants: { $sum: "$tenantsCount" }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalBedrooms: 1,
+                    totalTenants: 1
+                }
+            }
+        ]).exec();
+        let totalProperty = await Property.countDocuments(pro_query)
+        // let activeTenants = totalRooms.reduce((acc, cur) => acc + cur.tenants.filter(tenant => tenant.tenant_id).length, 0);
+        let voidRooms = totalRooms[0]?.totalBedrooms - totalRooms[0]?.totalTenants
         const total = await Tenants.countDocuments(query);
         if (!tenants || tenants.length === 0) {
             return res.status(404).json({
@@ -634,6 +701,9 @@ export const ListTenents = async (req, res) => {
             success: true,
             message: 'Tenants fetched successfully.',
             data: modifydata,
+            stackcards: {
+                activeTenants: totalRooms[0]?.totalTenants, totalProperty, voidRooms, totalRooms: totalRooms[0]?.totalBedrooms
+            },
             pagination: {
                 total,
                 page: parseInt(page),
@@ -642,7 +712,7 @@ export const ListTenents = async (req, res) => {
             }
         });
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',
@@ -976,7 +1046,9 @@ export const EditTenatns = async (req, res) => {
     try {
 
         const { _id } = req.query;
-        const tenant = await Tenants.find({ _id: new mongoose.Types.ObjectId(_id) }, { property: 1, title_before_name: 1, firstName: 1, middleName: 1, lastName: 1, claimReferenceNumber: 1, tenantContactNumber: 1, tenantEmail: 1, dateOfBirth: 1, nationalInsuranceNumber: 1, gender: 1 })
+        const tenant = await Tenants.find({ _id: new mongoose.Types.ObjectId(_id) }, {
+            property: 1, title_before_name: 1, firstName: 1, middleName: 1, lastName: 1, claimReferenceNumber: 1, tenantContactNumber: 1, tenantEmail: 1, dateOfBirth: 1, nationalInsuranceNumber: 1, gender: 1, recordStatus: 1
+        })
             // .select('title_before_name,firstName, middleName,lastName,claimReferenceNumber,contactNumber,email,dateOfBirth,nationalInsuranceNumber,gender')
             .lean()
         if (!tenant) {
@@ -1212,7 +1284,7 @@ export const getTenantDetails = async (req, res) => {
         ]);
 
         const rslDocuments = await Template.find({
-            rsl: new mongoose.Types.ObjectId(tenant[0].rslDetails?._id),
+            rsl: new mongoose.Types.ObjectId(tenant[0]?.rslDetails?._id),
             key: { $ne: 'leaverform' }
         }).select('_id name');
 
@@ -1230,6 +1302,7 @@ export const getTenantDetails = async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error);
 
         return res.status(500).json({
             success: false,
@@ -1705,8 +1778,7 @@ const handleExportLogic = async (obj) => {
     }
 };
 
-const sapratePropertyandTenantData = async (arr) => {
-
+const sapratePropertyandTenantData = async (arr, { addedByModel, addedByRole, addedBy }) => {
 
     try {
 
@@ -1725,18 +1797,16 @@ const sapratePropertyandTenantData = async (arr) => {
         let properties = []
         await Promise.all(
             Array.from(rslIds).map(async (_id) => {
-                let property = await Property.find({ rslTypeGroup: _id, status: 0 })
+                let property = await Property.find({ rslTypeGroup: _id, status: 0, addedBy: new mongoose.Types.ObjectId(addedBy) })
                     .select('rslTypeGroup fullAddress')
                     .lean();
                 properties = [...properties, ...property];
             })
         );
-        // console.log(properties);
-
         for (const arrItem of arr) {
             let proObj = {}
             let tenObj = {}
-            if (arrItem?.rslTypeGroup !== null) properties = await Property.find({ rslTypeGroup: arrItem?.rslTypeGroup })
+            if (arrItem?.rslTypeGroup !== null) properties = await Property.find({ rslTypeGroup: arrItem?.rslTypeGroup, status: 0, addedBy: new mongoose.Types.ObjectId(addedBy) })
             Object.keys(arrItem).forEach((key) => {
                 if (property.includes(key) && arrItem?.rslTypeGroup !== null) {
                     if (!propertydata.some((itm) => itm?.fullAddress == arrItem?.fullAddress)) {
@@ -1751,7 +1821,7 @@ const sapratePropertyandTenantData = async (arr) => {
             if (proObj?.rslTypeGroup !== null) {
                 isPropertyExist = properties.find((pro) => (pro.fullAddress == arrItem?.fullAddress))
                 if (!isPropertyExist?._id && Object.entries(proObj).length > 0) {
-                    let newProperty = await Property.create({ ...proObj, status: 0 })
+                    let newProperty = await Property.create({ ...proObj, status: 0, addedByModel, addedBy })
                     tenObj['property'] = newProperty?._id || null
                     proObj['_id'] = newProperty?._id || null
                 } else {
@@ -1781,20 +1851,14 @@ export const importExistingTenant = async (req, res) => {
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
         let modifiedData = data.map(async (obj) => {
             let modifiedObj = await handleExportLogic(obj)
-            // console.log('modifiedObj',modifiedObj);
             return { ...modifiedObj, addedByModel, addedByRole, addedBy }
         })
-        // console.log('obj', modifiedData);
-
         let finalData = await Promise.all(modifiedData)
-        let { tenantData, propertydata } = await sapratePropertyandTenantData(finalData)
+        let { tenantData, propertydata } = await sapratePropertyandTenantData(finalData, { addedByModel, addedByRole, addedBy })
         for (const tenObj of tenantData) {
             if (tenObj?.property) {
-                // console.log(tenObj.signInDate);
-
                 let tenant = new Tenants({ ...tenObj, isDeleted: 0, approved_status: 1, isSignOut: 0, status: 0, signOutDate: null, endDate: null })
                 let newtenant = await tenant.save()
-                // console.log(newtenant?._id);
                 if (['User'].includes(addedByModel) && tenObj?.property && newtenant?._id) {
                     await Property.updateOne(
                         { _id: newtenant?.property },
@@ -1982,33 +2046,24 @@ export const ExportNotActiveTenants = async (req, res) => {
                         claimReferenceNumber: item?.claimReferenceNumber === ('' || undefined) ? "No" : item?.claimReferenceNumber
                     };
                 }
-
             })
         );
+
         let replaceKeys = {
-            createdAt: 'Created At',
-            addedBy: 'Added By',
-            rslTypeGroup: "Rsl",
             propertyAddress: 'Property Address',
             area: "Area Name",
             city: "City",
             postCode: "Postcode",
-            bedrooms: "Number of Bedrooms in Property",
-            basicRent: "Basic Rent",
-            serviceCharges: "Service Charges",
-            eligibleRent: "eligible Rent",
-            ineligibleCharge: "weekly eligible Charge",
-            sharedWithOther: "Bedroom sharedWithOther",
+            room: "Room",
             firstName: "First Name",
             middleName: "Middle Name",
             lastName: "Surname",
-            room: "Room",
             dateOfBirth: "Date of Birth",
             nationalInsuranceNumber: "NINO",
             claimReferenceNumber: "Claim Reference No",
-            signInDate: "Sign In Date"
+            signInDate: "Sign In Date",
+            recordStatus: 'Action'
         }
-
 
         let buffer = await generateExcelFile(modifydata, replaceKeys)
 
@@ -2017,10 +2072,7 @@ export const ExportNotActiveTenants = async (req, res) => {
         res.setHeader('Content-Length', buffer.length);
         return res.end(buffer);
 
-
-        // Send the buffer as a response
     } catch (error) {
-
         res.status(500).json({
             success: false,
             message: 'Failed to fetch tenants',
@@ -2050,27 +2102,19 @@ export const HandleSendEmailToAgent = async (req, res) => {
         }
 
         let replaceKeys = {
-            createdAt: 'Created At',
-            addedBy: 'Added By',
-            rslTypeGroup: "Rsl",
             propertyAddress: 'Property Address',
             area: "Area Name",
             city: "City",
             postCode: "Postcode",
-            bedrooms: "Number of Bedrooms in Property",
-            basicRent: "Basic Rent",
-            serviceCharges: "Service Charges",
-            eligibleRent: "eligible Rent",
-            ineligibleCharge: "weekly eligible Charge",
-            sharedWithOther: "Bedroom sharedWithOther",
+            room: "Room",
             firstName: "First Name",
             middleName: "Middle Name",
             lastName: "Surname",
-            room: "Room",
             dateOfBirth: "Date of Birth",
             nationalInsuranceNumber: "NINO",
             claimReferenceNumber: "Claim Reference No",
-            signInDate: "Sign In Date"
+            signInDate: "Sign In Date",
+            recordStatus: 'Action'
         }
 
         let buffer = await generateExcelFile(tenants, replaceKeys)

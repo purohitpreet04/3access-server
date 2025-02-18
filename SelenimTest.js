@@ -29,7 +29,7 @@ async function updateTenant(TenUser) {
         if (result instanceof Error) {
             throw result;
         }
-        // console.log("result=>", result);
+        console.log("result=>", result);
 
         // await Tenants.findByIdAndUpdate(TenUser?._id, { ...result });
         console.log('Tenant updated successfully');
@@ -41,11 +41,11 @@ async function updateTenant(TenUser) {
 
 let TenUser = {
     _id: '679b6f3a30b6d312330b3c77',
-    lastName: 'Ehtesham',
-    nationalInsuranceNumber: 'PH416711D',
-    dateOfBirth: "2002-01-22",
-    property: { postCode: 'B11 3BS' },
-    claimReferenceNumber: '60716587'
+    lastName: 'Dawodi',
+    nationalInsuranceNumber: 'TJ948048A',
+    dateOfBirth: "2001-01-03",
+    property: { postCode: 'B10 0HX' },
+    claimReferenceNumber: '60747476'
 }
 updateTenant(TenUser)
 // handleSendEmail()
