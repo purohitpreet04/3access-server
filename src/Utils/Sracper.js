@@ -12,19 +12,19 @@ async function CheckStatus(user) {
         options.addArguments('--disable-gpu');
         options.addArguments('--no-sandbox');
         options.addArguments('--disable-dev-shm-usage');
-        
+
         const driver = new Builder()
-        .forBrowser('chrome')
-        .setChromeOptions(options)
-        .build();
+            .forBrowser('chrome')
+            .setChromeOptions(options)
+            .build();
 
         // const driver2 = new Builder()
         // .forBrowser('chrome')
         // .setChromeOptions(options)
         // .build();
-        
+
         try {
-            let bdate = moment(user?.dateOfBirth).format('YYYY-MM-DD').split('-') 
+            let bdate = moment(user?.dateOfBirth).format('YYYY-MM-DD').split('-')
             await driver.get('https://espws.necsws.com/ords/pwslive/call_initial_apex_page.nes_selfsrv?service=NEB&la=BIRM&language=ENG');
             const linkElement = await driver.wait(until.elementLocated(By.id('link-LANDSUM010')), 10000);
             await driver.executeScript("arguments[0].scrollIntoView(true);", linkElement);
@@ -106,11 +106,11 @@ async function CheckStatus(user) {
                 if (error.name === 'NoSuchElementError') {
                     console.log('No validation-summary element found. Moving to table...');
                 } else {
-                    console.log('No tenant details found. Task Over...');
+                    console.log('No tenant details found in validation-summary block. Task Over...');
                 }
             }
-          
-            
+
+
             // fs.writeFileSync('demo.html', pageSource)
             try {
                 const table = await driver.wait(until.elementLocated(By.id('R12666048653399214table')), 10000);
@@ -122,7 +122,7 @@ async function CheckStatus(user) {
                     const value = await cells[1].getText();
                     if (key === 'Next_HB_payment_date' || key === 'Suspended_Date') {
                         userData[key] = moment(value, 'DD/MM/YYYY').toISOString()
-                    }else {
+                    } else {
                         userData[key] = value;
                     }
                 }
@@ -134,12 +134,62 @@ async function CheckStatus(user) {
             } catch (error) {
                 if (error.name === 'NoSuchElementError') {
                     console.log('No tenant details found. Task Over...');
-                }else{
-                    console.log('No tenant details found. Task Over...');
+                } else {
+                    console.log('No tenant details found in table block. Task Over...', error.message);
                 }
             }
-            // console.log("userData=>", userData);
-            res({ ...userData })
+
+            try {
+                const paymentBtn = await driver.wait(until.elementLocated(By.id('B14430388009254110')), 10000);
+                await driver.sleep(5000);
+                await driver.executeScript("arguments[0].scrollIntoView(true);", paymentBtn);
+                await driver.executeScript("window.scrollBy(0, -100);");
+                await driver.wait(until.elementIsVisible(paymentBtn), 5000);
+                if (paymentBtn.isDisplayed()) {
+                    await driver.executeScript("arguments[0].click();", paymentBtn);
+                }
+            } catch (error) {
+                if (error.name === 'ElementClickInterceptedError') {
+                    await paymentBtn.click();
+                } else {
+                    if (error.name === 'NoSuchElementError') {
+                        console.log('No payment btn found. Task Over...');
+                    } else {
+                        console.log('No payment btn found in payment block. Task Over...', error.message);
+                    }
+                }
+            }
+            let data = [];
+            try {
+                const payment_table = await driver.wait(until.elementLocated(By.id('report_cpaym_result')), 10000);
+                const rows = await payment_table.findElements(By.css('tbody tr'));
+                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                    const cells = await rows[i].findElements(By.css('td'));
+                    const cellTexts = await Promise.all(cells.map(async cell => await cell.getText()));
+                    data.push({
+                        date: cellTexts[0],
+                        hb: cellTexts[1],
+                        dhp: cellTexts[2],
+                        adjustments: cellTexts[3],
+                        amount: cellTexts[4],
+                        from_date: cellTexts[5],
+                        to_date: cellTexts[6],
+                        method: cellTexts[7],
+                        payee: cellTexts[8],
+                    });
+                }
+
+            } catch (error) {
+                if (error.name === 'NoSuchElementError') {
+                    console.log('No payment details found. Task Over...');
+                } else {
+                    console.log('No tenant details found in payment table block. Task Over...', error.message);
+                }
+            }
+
+
+            // console.log("userData=>", { ...userData, paymentdata: data });
+            res({ ...userData, paymentdata: data })
             await driver.quit();
         } catch (error) {
             rej(error)

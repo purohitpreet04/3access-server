@@ -1264,6 +1264,7 @@ export const getTenantDetails = async (req, res) => {
                     Next_HB_payment_date: 1,
                     Suspended_Date: 1,
                     sts_Str: 1,
+                    paymentdata: 1,
                     rslDetails: {
                         _id: '$companyDetails._id',
                         rslname: '$companyDetails.companyname',

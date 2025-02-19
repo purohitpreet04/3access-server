@@ -146,11 +146,25 @@ const AssessmentSchema = new Schema({
   ReferredFrom: { type: String, default: '' },
   nextAssessmentDate: { type: Date },
   categories: { type: Object, default: {} },
-  
+
   // violenceAggression: { type: Boolean, default: false },
   // knownAssociates: { type: Boolean, default: false },
   // hazardsFromOthers: { type: Boolean, default: false },
 })
+
+
+const reportSchema = new mongoose.Schema({
+  date: { type: String, default: '' },
+  hb: { type: String, default: '' },
+  dhp: { type: String, default: '' },
+  adjustments: { type: String, default: '' },
+  amount: { type: String, default: '' },
+  from_date: { type: String, default: '' },
+  to_date: { type: String, default: '' },
+  method: { type: String, default: '' },
+  payee: { type: String, default: '' },
+});
+
 
 const TenantSchema = new Schema({
   tenantSignupEmail: { type: String, default: '' },
@@ -169,7 +183,7 @@ const TenantSchema = new Schema({
     required: true,
     enum: ['User', 'Staff']  // Only allow "User" or "Staff" as values
   },
-  refferralAgency:{ type: String, default: '' },
+  refferralAgency: { type: String, default: '' },
   hasGPInfo: { type: Boolean, default: false },
   homelessHostelSupport: { type: Boolean, default: false },
   affordProperty: { type: Boolean, default: false },
@@ -369,6 +383,7 @@ const TenantSchema = new Schema({
   Housing_benefit_weekly_amount: { type: String, default: '' },
   sts_Str: { type: String, default: '' },
   isDeleted: { type: Number, default: 0 },
+  paymentdata: [reportSchema]
 }, {
   timestamps: true
 });

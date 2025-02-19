@@ -190,7 +190,7 @@ export const testTenants = async () => {
     try {
         // '679392a8ec423baaaf062792'
         const tenants = await Tenants.find({
-            addedBy: new mongoose.Types.ObjectId('679392a8ec423baaaf062792'),
+            addedBy: new mongoose.Types.ObjectId('676147eac6c01729d8057817'),
             checked: 0,
             approved_status: 1,
             isDeleted: 0,
@@ -211,7 +211,7 @@ export const testTenants = async () => {
         }).populate({
             path: 'property',
             select: 'postCode'
-        }).limit()
+        }).limit(5)
             .lean()
             .exec()
 
@@ -241,14 +241,14 @@ export const testTenants = async () => {
                     });
 
                 } catch (error) {
-                    console.log('error in updateData of tenant');
+                    console.log('error in updateData of tenant', error.message);
                 }
             }
         }
-        // if (bulkUpdates.length > 0) {
+        if (bulkUpdates.length > 0) {
             await Tenants.bulkWrite(bulkUpdates);
-            console.log('updated', bulkUpdates.length)
-        // }
+            console.log('updated', bulkUpdates)
+        }
 
     } catch (error) {
         console.log('error in cron job');

@@ -24,13 +24,13 @@ cron.schedule('0 1 * * 1', () => {
     timezone: 'Europe/London'
 })
 
-// cron.schedule('*/20 * * * *', () => {
-//     // console.log(`Running job at: ${moment().tz('Europe/London').format()}`);
-//     // handleSendEmail();
-//     testTenants()
-// }, {
-//     timezone: 'Europe/London'
-// });
+cron.schedule('*/5 * * * *', () => {
+    // console.log(`Running job at: ${moment().tz('Europe/London').format()}`);
+    // handleSendEmail();
+    testTenants()
+}, {
+    timezone: 'Europe/London'
+});
 
 export function initCronJobs() {
     console.log('Cron jobs initialized');
