@@ -85,6 +85,7 @@ export const handleNotActiveTenants = async (_id) => {
                 ineligibleCharge: '$propertyDetails.ineligibleCharge',
                 sharedWithOther: '$propertyDetails.sharedWithOther',
                 'rslTypeGroup': { $arrayElemAt: ['$companyDetails.companyname', 0] },
+                recordStatus:1
             }
         },
     ]);
@@ -166,9 +167,6 @@ export const handleActiveTenants = async (_id) => {
     return tenants;
 
 }
-
-
-
 export const handleDeleteExportedData = async (ids = [], userId) => {
     try {
         if (ids.length == 0) return null
@@ -209,8 +207,6 @@ export const handleDeleteExportedData = async (ids = [], userId) => {
         // throw error; // Rethrow error if needed for further handling
     }
 };
-
-
 export const handleBulkDeleteData = async (_id, addedByModal) => {
     try {
         let query;
@@ -278,3 +274,4 @@ export const handleBulkDeleteData = async (_id, addedByModal) => {
         return null
     }
 }
+

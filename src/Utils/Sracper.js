@@ -22,7 +22,6 @@ async function CheckStatus(user) {
         // .forBrowser('chrome')
         // .setChromeOptions(options)
         // .build();
-
         try {
             let bdate = moment(user?.dateOfBirth).format('YYYY-MM-DD').split('-')
             await driver.get('https://espws.necsws.com/ords/pwslive/call_initial_apex_page.nes_selfsrv?service=NEB&la=BIRM&language=ENG');
@@ -187,8 +186,6 @@ async function CheckStatus(user) {
                 }
             }
 
-
-            // console.log("userData=>", { ...userData, paymentdata: data });
             res({ ...userData, paymentdata: data })
             await driver.quit();
         } catch (error) {

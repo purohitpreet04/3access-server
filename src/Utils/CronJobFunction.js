@@ -53,7 +53,7 @@ import { handleNotActiveTenants } from "../Models/TenantModal.js";
 export const checkTenatStatus = async () => {
     try {
         const tenants = await Tenants.find({
-            checked: 0,
+            // checked: 0,
             approved_status: 1,
             isSignOut: 0,
             claimReferenceNumber: { $ne: '' },
@@ -124,27 +124,19 @@ export const handleSendEmail = async () => {
                 return;
             }
             let replaceKeys = {
-                createdAt: 'Created At',
-                addedBy: 'Added By',
-                rslTypeGroup: "Rsl",
                 propertyAddress: 'Property Address',
                 area: "Area Name",
                 city: "City",
                 postCode: "Postcode",
-                bedrooms: "Number of Bedrooms in Property",
-                basicRent: "Basic Rent",
-                serviceCharges: "Service Charges",
-                eligibleRent: "eligible Rent",
-                ineligibleCharge: "weekly eligible Charge",
-                sharedWithOther: "Bedroom sharedWithOther",
+                room: "Room",
                 firstName: "First Name",
                 middleName: "Middle Name",
                 lastName: "Surname",
-                room: "Room",
                 dateOfBirth: "Date of Birth",
                 nationalInsuranceNumber: "NINO",
                 claimReferenceNumber: "Claim Reference No",
-                signInDate: "Sign In Date"
+                signInDate: "Sign In Date",
+                recordStatus: 'Action'
             }
 
 
