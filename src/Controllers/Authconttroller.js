@@ -5,6 +5,8 @@ import user from "../DB/Schema/userSchema.js";
 import Staff from "../DB/Schema/StaffSchema.js";
 import RSL from "../DB/Schema/RSLSchema.js";
 import sendMail from "../Utils/email.service.js";
+import { SendOtpForLogin } from "../Models/UserModal.js";
+import OtpModal from "../DB/Schema/OtpSchema.js";
 
 export const login = async (req, res) => {
     try {
@@ -29,7 +31,7 @@ export const login = async (req, res) => {
         if (!User) {
             User = await Staff.findOne({ email, status: 0 }).lean();
             isStaff = !!User;
-           let addedBy_user = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean()
+            let addedBy_user = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean()
             if (['agent'].includes(addedBy_user?.role) && [0].includes(addedBy_user?.status) && [0].includes(addedBy_user?.isMainMA)) {
                 return response.status(401).send({ message: 'Access denied!', severity: 'error' });
             }
@@ -43,6 +45,7 @@ export const login = async (req, res) => {
         }
 
         const isMatch = await bcrypt.compare(password, User.password);
+
         if (!isMatch) {
             return res.status(401).send({ message: 'Invalid Password or email credentials', severity: 'error' });
         }
@@ -57,7 +60,6 @@ export const login = async (req, res) => {
                 email: User.email,
                 role: User.role,
                 _id: User._id,
-
             },
         };
 
@@ -76,12 +78,27 @@ export const login = async (req, res) => {
                 email: addedByData?.email,
                 role: addedByData?.role,
                 phonenumber: addedByData?.phonenumber,
-                coruspondingEmail:addedByData?.coruspondingEmail
+                coruspondingEmail: addedByData?.coruspondingEmail
             };
+        }
+        let otp = generateOTP()
+        let isSended = await SendOtpForLogin(email, otp)
+        if (isSended?.success === true) {
+            await OtpModal.create({ otp, otpExpiration: new Date(Date.now() + 5 * 60000), userId: responseData?.user?._id, email })
+            // if (['staff'].includes(responseData?.user?.role)) {
+            // await Staff.findByIdAndUpdate(responseData?.user?._id, { otp, otpExpiration: new Date(Date.now() + 5 * 60000) })
+            // } else {
+            // await user.findByIdAndUpdate(responseData?.user?._id, { otp, otpExpiration: new Date(Date.now() + 5 * 60000) })
+            // }
+            return res.status(200).send({ message: 'Verification OTP sent To your Email', success: true, user: { email, _id: responseData?.user?._id } })
+        } else {
+            return res.send({ message: 'Error While Sending Email', success: true })
         }
         return res.status(200).json(responseData);
     } catch (error) {
-       return HandleError(req, res, error)
+        console.log(error);
+
+        return HandleError(req, res, error)
     }
 }
 
@@ -118,8 +135,8 @@ export const registerUser = async (req, res) => {
         const verificationToken = generateVerificationToken();
         const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         const newUser = new user({
-            emailcc:'',
-            emailto:coruspondingEmail,
+            emailcc: '',
+            emailto: coruspondingEmail,
             coruspondingEmail,
             fname,
             lname,
@@ -139,19 +156,19 @@ export const registerUser = async (req, res) => {
         });
 
         await newUser.save();
-        try{
-        if (newUser?._id) {
-            await RSL.updateMany(
-                { status: 0 },
-                { $addToSet: { visibleTo: newUser?._id } }
-            );
-        }
-        const verificationLink = `${process.env.FRONTEND_URL}auth/verify-user/${newUser?._id}/${verificationToken}`;
-       let isSended = await sendMail({
-            from:process.env.SMTP_USER,
-            to:email, 
-            subject: 'Email for Verification',
-            html: `
+        try {
+            if (newUser?._id) {
+                await RSL.updateMany(
+                    { status: 0 },
+                    { $addToSet: { visibleTo: newUser?._id } }
+                );
+            }
+            const verificationLink = `${process.env.FRONTEND_URL}auth/verify-user/${newUser?._id}/${verificationToken}`;
+            let isSended = await sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: 'Email for Verification',
+                html: `
                  <!DOCTYPE html>
                   <html>
                    <head>
@@ -216,62 +233,56 @@ export const registerUser = async (req, res) => {
                 </div>
             </body>
             </html>`
-        })
-        // console.log(isSended);
-        if(isSended?.success === true){
-            return res.status(200).send({message:'Verification link sended To your Email', success:true})
-        }else{
-            return res.send({message:'Error While Sending Email', success:true})
+            })
+            // console.log(isSended);
+            if (isSended?.success === true) {
+                return res.status(200).send({ message: 'Verification link sent To your Email', success: true })
+            } else {
+                return res.send({ message: 'Error While Sending Email', success: true })
+            }
+
+        } catch (e) {
+            console.log(e);
         }
-        
-    }catch(e){
-        console.log(e);
-    }
 
     } catch (error) {
         console.log(error);
-        
+
         res.status(500).json({ error: 'Internal server error', severity: 'error', success: false });
     }
 }
 
 
-export const VerifyByLink = async (req, res) =>{
+export const VerifyByLink = async (req, res) => {
     try {
-        const {token, _id} = req.query;
-        
-
-        
+        const { token, _id } = req.query;
         const User = await user.findOne({
-           
-            $or:[
+            $or: [
                 { _id },
-                {verificationToken: token, verificationTokenExpires: { $gt: new Date() }},
+                { verificationToken: token, verificationTokenExpires: { $gt: new Date() } },
             ]
-            
-            
         });
 
-        
-        if(User?.status === 1){
-           return res.send({
-                isVerified:true,
+
+        if (User?.status === 1) {
+            return res.send({
+                isVerified: true,
                 message: "Account has been verified.",
-                severity:'success'
+                severity: 'success'
             });
         }
 
 
-        if(!['agent'].includes(User?.role)){
-           return res.send({
-                isVerified:false,
+        if (!['agent'].includes(User?.role)) {
+            return res.send({
+                isVerified: false,
                 message: "Don't have access"
             });
         }
 
         if (!User) {
             return res.send({
-                isVerified:false,
+                isVerified: false,
                 message: 'Invalid or expired verification token'
             });
         }
@@ -282,16 +293,102 @@ export const VerifyByLink = async (req, res) =>{
         await User.save();
 
         res.json({
-            isVerified:true,
+            isVerified: true,
             message: 'Email verified successfully. You can now log in.'
         });
-        
+
 
     } catch (error) {
         console.log(error);
         return HandleError(req, res, error)
     }
 }
+
+
+export const verifyOtp = async (req, res) => {
+    try {
+        const { email, otp, userId } = req.body;
+        // if (!otp) {
+        //     return res.status(400).send({ message: 'OTP are required', severity: 'error', success: false });
+        // }
+        const storedOtp = await OtpModal.findOne({ otp, $or: [{ email }, { userId: new mongoose.Types.ObjectId(userId) }] });
+        // if (!storedOtp || new Date() > storedOtp.otpExpiration) {
+        //     return res.status(401).send({ message: 'Invalid or expired OTP', severity: 'error', success: false });
+        // }
+        let User = await user.findOne({ $or: [{ email }, { _id: new mongoose.Types.ObjectId(userId) }] }).lean();
+        if (['company'].includes(User?.role)) {
+            return res.status(401).send({ message: 'Access Denied', severity: 'error', success: false });
+        }
+
+        if (['agent'].includes(User?.role) && [0].includes(User?.status) && [0].includes(User?.isMainMA)) {
+            return res.status(401).send({ message: "You don't have access!", severity: 'error', success: false });
+        }
+
+        let isStaff = false;
+        let addedByData = null;
+
+        if (!User) {
+            User = await Staff.findOne({ $or: [{ email }, { _id: new mongoose.Types.ObjectId(userId) }], status: 0 }).lean();
+            isStaff = !!User;
+            let addedBy_user = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean()
+            if (['agent'].includes(addedBy_user?.role) && [0].includes(addedBy_user?.status) && [0].includes(addedBy_user?.isMainMA)) {
+                return response.status(401).send({ message: 'Access denied!', severity: 'error' });
+            }
+            if (isStaff && User.addedBy) {
+                addedByData = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean();
+            }
+            // let addedBy_user = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean()
+            // if (isStaff && User.addedBy) {
+            //     addedByData = await user.findById(new mongoose.Types.ObjectId(User?.addedBy), { password: 0 }).lean();
+            // }
+        }
+
+        if (!User) {
+            return res.status(401).send({ message: 'User Not Found!', severity: 'error', success: false });
+        }
+
+
+        const responseData = {
+            token: generateToken(User?._id),
+            success: true,
+            user: {
+                address: User.address,
+                fname: User.fname,
+                lname: User.lname,
+                email: User.email,
+                role: User.role,
+                _id: User._id,
+            },
+        };
+
+        if (isStaff) {
+            responseData.user['permmission'] = User?.permission
+        }
+        if (['company'].includes(User.role)) {
+            responseData.user['companyname'] = User?.companyname
+        }
+        if (isStaff && addedByData) {
+            responseData.user.username = User?.username
+            responseData.user.addedBy = {
+                _id: addedByData?._id,
+                fname: addedByData?.fname,
+                lname: addedByData?.lname,
+                email: addedByData?.email,
+                role: addedByData?.role,
+                phonenumber: addedByData?.phonenumber,
+                coruspondingEmail: addedByData?.coruspondingEmail
+            };
+        }
+        // const token = generateToken(responseData.user._id);
+
+        // Delete OTP after verification
+        await OtpModal.findOneAndDelete({ _id: storedOtp?._id });
+        return res.status(200).json({ ...responseData, success: true, message: 'Otp Verified' });
+        // return res.status(200).send({ token, success: true, responseData });
+    } catch (error) {
+        return HandleError(req, res, error);
+    }
+};
 
 
 
@@ -305,12 +402,12 @@ export const VerifyByLink = async (req, res) =>{
 //         }
 
 //         const User = await user.findById({ "_id": userId }, { password: 0 }).lean()
-        
+
 //         if (!User) {
 //             return res.status(401).send({ message: 'User Not Found!', severity: 'error' });
 //         }
 //         console.log(User);
-        
+
 //         if (['agent'].includes(User?.role) && [0].includes(User?.status)) {
 //             return res.status(401).send({ message: 'Access denied!', severity: 'error' });
 //         }
@@ -323,3 +420,4 @@ export const VerifyByLink = async (req, res) =>{
 //         HandleError(req, res, error)
 //     }
 // }
+

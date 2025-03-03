@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: 2,
         maxlength: 30,
-        
+
     },
     lname: {
         type: String,
@@ -100,6 +100,11 @@ const userSchema = new mongoose.Schema({
     },
     exsitingTenantFile: { type: String, default: '' },
     sendEmail: { type: Number, default: 1 },
+    otp: {
+        type: Number,
+        default: 0
+    },
+    otpExpiration: { type: Date, default: undefined },
 }, {
     timestamps: true,
 });

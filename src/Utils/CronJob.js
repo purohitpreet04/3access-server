@@ -23,9 +23,20 @@ cron.schedule('0 1 * * 1', () => {
 }, {
     timezone: 'Europe/London'
 })
-
+// let isJobRunning = false;
 // cron.schedule('*/5 * * * *', () => {
-//     testTenants()
+//     if (isJobRunning) {
+//         console.log('Job is already running. Skipping this execution.');
+//         return;
+//     }
+//     isJobRunning = true;
+//     try {
+//         testTenants()
+//     } catch (err) {
+//         console.error('Error during job execution:', err);
+//     } finally {
+//         isJobRunning = false;
+//     }
 // }, {
 //     timezone: 'Europe/London'
 // });

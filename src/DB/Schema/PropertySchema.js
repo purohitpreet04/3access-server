@@ -5,12 +5,12 @@ const propertySchema = new mongoose.Schema({
     addedBy: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        refPath: 'addedByModel' // Dynamic reference based on `addedByModel`
+        refPath: 'addedByModel'
     },
     addedByModel: {
         type: String,
         required: true,
-        enum: ['User', 'Staff']  // Only allow "User" or "Staff" as values
+        enum: ['User', 'Staff'] 
     },
     councilTaxPayer: {
         type: Number,

@@ -489,3 +489,6 @@ export function writeLog(logMessage) {
     }
   });
 }
+
+
+

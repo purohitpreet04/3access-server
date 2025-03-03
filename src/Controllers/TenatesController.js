@@ -506,6 +506,7 @@ export const ListTenents = async (req, res) => {
             ]
         }
         if (['agent', 'company'].includes(role)) {
+           
             const staffMembers = await Staff.find({ addedBy: _id }).select('_id').lean();
             const staffIds = staffMembers.map(staff => staff._id);
 
@@ -555,7 +556,7 @@ export const ListTenents = async (req, res) => {
 
 
             pro_query = {
-                visibleTo: { $in: _id },
+                visibleTo: { $in: [_id] },
                 status: 0,
                 idDeleted: 0,
                 $or: [
@@ -685,7 +686,7 @@ export const ListTenents = async (req, res) => {
         let voidRooms = totalRooms[0]?.totalBedrooms - totalRooms[0]?.totalTenants
         const total = await Tenants.countDocuments(query);
         if (!tenants || tenants.length === 0) {
-            return res.status(404).json({
+            return res.status(200).json({
                 success: false,
                 message: 'No tenants found matching the criteria.',
                 data: [],

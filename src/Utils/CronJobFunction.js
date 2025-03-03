@@ -58,10 +58,10 @@ export const checkTenatStatus = async () => {
             isSignOut: 0,
             claimReferenceNumber: { $ne: '' },
             nationalInsuranceNumber: { $ne: '' },
-            $or: [
-                { status: 0 },
-                { status: { $exists: false } },
-            ]
+            // $or: [
+            //     { status: 0 },
+            //     { status: { $exists: false } },
+            // ]
         }, {
             firstName: 1,
             lastName: 1,
@@ -180,19 +180,18 @@ export const handleSendEmail = async () => {
 export const testTenants = async () => {
 
     try {
-        // '679392a8ec423baaaf062792'
         const tenants = await Tenants.find({
-            addedBy: new mongoose.Types.ObjectId('676147eac6c01729d8057817'),
-            checked: 0,
+            addedBy: new mongoose.Types.ObjectId('679392a8ec423baaaf062792'),
+            // checked: 0,
             approved_status: 1,
             isDeleted: 0,
             isSignOut: 0,
             claimReferenceNumber: { $ne: '' },
             nationalInsuranceNumber: { $ne: '' },
-            $or: [
-                { status: 0 },
-                { status: { $exists: false } },
-            ]
+            // $or: [
+            //     { status: 0 },
+            //     { status: { $exists: false } },
+            // ]
         }, {
             firstName: 1,
             lastName: 1,
@@ -203,7 +202,7 @@ export const testTenants = async () => {
         }).populate({
             path: 'property',
             select: 'postCode'
-        }).limit(5)
+        }).limit()
             .lean()
             .exec()
 
@@ -212,12 +211,14 @@ export const testTenants = async () => {
             return;
         }
         let error = {}
+        // console.log(tenants.length);
         let splitarray = chunkArray(tenants, 3)
-
         const bulkUpdates = [];
         for (let Chunk of splitarray) {
             for (let TenUser of Chunk) {
                 try {
+                    console.log(TenUser?._id);
+                    
                     const res = await CheckStatus(TenUser);
                     let date = new Date()
                     if (res?.error) {

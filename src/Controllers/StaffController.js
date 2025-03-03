@@ -5,10 +5,11 @@ import Staff from '../DB/Schema/StaffSchema.js';
 import user from '../DB/Schema/userSchema.js';
 import Property from '../DB/Schema/PropertySchema.js';
 import logUserAction from './ActivityController.js';
+import TaskSchema from '../DB/Schema/TaskSchema.js';
 
 
 export const AddNewStaff = async (req, res) => {
-    const { coruspondingEmail,_id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
+    const { coruspondingEmail, _id, jobTitle, fname, lname, phonenumber, gender, username, email, password, companyEmail, role, addedBy, permission, Property_per } = req.body;
 
     const staffData = {
         coruspondingEmail,
@@ -26,7 +27,7 @@ export const AddNewStaff = async (req, res) => {
         password,
         Property_per,
     };
-    
+
     if (password) {
         staffData.password = await bcrypt.hash(password, 10);
     }
@@ -122,8 +123,8 @@ export const AddNewStaff = async (req, res) => {
             res.status(201).json({ message: 'Staff added successfully', severity: 'sucsess', success: true });
         }
     } catch (error) {
-       
-        
+
+
         if (error.name === 'ValidationError') {
             return res.status(400).json({ message: 'Validation error', errors: error.errors, severity: 'error', success: false });
         }
@@ -138,7 +139,7 @@ export const AddNewStaff = async (req, res) => {
 
 export const ListStaff = async (req, res) => {
 
-    const { _id, search, page = 1, limit = 10, filterby } = req.query;
+    const { _id, search, page = 1, limit = 10, filterby, status } = req.query;
 
     try {
         const filter = {};
@@ -148,18 +149,21 @@ export const ListStaff = async (req, res) => {
         if (filterby) {
             filter['role'] = filterby
         }
-        filter['status'] = 0
+        // Ensure status is a valid integer before applying the filter
+        // if (status !== undefined && !isNaN(status)) {
+        //     filter.status = 2;
+        // }
         if (search) {
+            const searchRegex = { $regex: search, $options: 'i' };
             filter.$or = [
-                { firstName: { $regex: search, $options: 'i' } },
-                { jobTitle: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { username: { $regex: search, $options: 'i' } },
+                { firstName: searchRegex },
+                { jobTitle: searchRegex },
+                { lastName: searchRegex },
+                { email: searchRegex },
+                { username: searchRegex },
             ];
         }
 
-        // Calculate pagination
         let skip
         if (page > 1) {
             skip = (page - 1) * limit;
@@ -168,7 +172,7 @@ export const ListStaff = async (req, res) => {
         }
 
         const staffList = await Staff.aggregate([
-            { $match: filter },
+            { $match: { ...filter, status: Number(status) } },
             { $project: { password: 0 } },
             { $skip: parseInt(skip) },
             { $limit: parseInt(limit) },
@@ -196,8 +200,8 @@ export const ListStaff = async (req, res) => {
             });
         }
     } catch (error) {
-      
-        
+
+
         res.status(500).json({ success: false, message: 'Server Error', severity: 'error' });
     }
 }
@@ -339,5 +343,182 @@ export const DeleteStaff = async (req, res) => {
             message: 'Internal server error',
             severity: 'error'
         });
+    }
+};
+
+
+export const ArchiveStaff = async (req, res) => {
+    const { staffId } = req.query;
+
+    try {
+        if (!mongoose.Types.ObjectId.isValid(staffId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid staff ID format',
+                severity: 'error'
+            });
+        }
+
+        const archivedStaff = await Staff.findByIdAndUpdate(
+            staffId,
+            { status: 2 },
+            { new: true }
+        );
+
+        if (!archivedStaff) {
+            return res.status(404).json({
+                success: false,
+                message: 'Staff member not found',
+                severity: 'error'
+            });
+        }
+
+        await user.updateMany(
+            { _id: archivedStaff?.addedBy },
+            {
+                $pull: {
+                    companyagent: staffId,
+                    staff: staffId
+                }
+            }
+        );
+
+        // // Remove staff's visibility from properties
+        // await Property.updateMany(
+        //     { visibleTo: staffId },
+        //     { $pull: { visibleTo: staffId } }
+        // );
+
+        await logUserAction(req.headers['user'], 'ARCHIVE', {
+            username: archivedStaff?.username, fname: archivedStaff?.fname,
+            lname: archivedStaff?.lname,
+        }, 'Staff', archivedStaff._id, req.query.addedByModel);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Staff member archived successfully',
+            severity: 'success'
+        });
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            severity: 'error'
+        });
+    }
+}
+
+export const Restorestaff = async (req, res) => {
+    let { staffId } = req.query;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(staffId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid staff ID format',
+                severity: 'error'
+            });
+        }
+
+        const unarchivedStaff = await Staff.findByIdAndUpdate(
+            staffId,
+            { status: 0 },
+            { new: true }
+        );
+
+        if (!unarchivedStaff) {
+            return res.status(404).json({
+                success: false,
+                message: 'Staff member not found',
+                severity: 'error'
+            });
+        }
+
+        await user.updateMany(
+            { _id: unarchivedStaff?.addedBy },
+            {
+                $push: {
+                    companyagent: staffId,
+                    staff: staffId
+                }
+            }
+        );
+
+        // // Remove staff's visibility from properties
+        // await Property.updateMany(
+        //     { visibleTo: staffId },
+        //     { $pull: { visibleTo: staffId } }
+        // );
+
+        await logUserAction(req.headers['user'], 'Restore', {
+            username: unarchivedStaff?.username, fname: unarchivedStaff?.fname,
+            lname: unarchivedStaff?.lname,
+        }, 'Staff', unarchivedStaff._id, req.query.addedByModel);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Staff member restored successfully',
+            severity: 'success'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            severity: 'error'
+        });
+    }
+}
+
+
+export const transferWork = async (req, res) => {
+    try {
+        const { staffId, newStaffId, status, unavailableFrom, unavailableTo, reason, taskDescription } = req.body;
+
+        if (!staffId || !newStaffId || !status || !['holiday', 'ill', 'fired'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid or missing input data' });
+        }
+
+        const staff = await Staff.findById(staffId);
+        const newStaff = await Staff.findById(newStaffId);
+
+        if (!staff || !newStaff) {
+            return res.status(404).json({ message: 'One or both staff members not found' });
+        }
+
+        staff.unavailabilityStatus = status;
+        staff.unavailablefrom = unavailableFrom || Date.now();
+        staff.unavailableto = unavailableTo || null; // If no end date, keep it null
+        staff.unavailabilityReason = reason || 'Not specified';
+        staff.permission = []; // Revoke all permissions
+        await staff.save();
+
+        // Find all tasks assigned to the old staff
+        const tasks = await TaskSchema.find({ assignedTo: staffId });
+
+        // Reassign tasks to new staff
+        for (const task of tasks) {
+            task.assignedTo = newStaffId;
+            task.description = taskDescription;
+            await task.save();
+
+            // Log reassignment in the staff model
+            staff.reassignedTasks.push({
+                taskId: task._id,
+                reassignedTo: newStaffId,
+            });
+        }
+        await staff.save();
+
+        // Transfer permissions (merge without duplicates)
+        newStaff.permission = [...new Set([...newStaff.permission, ...staff.permission])];
+        await newStaff.save();
+
+        return res.status(200).json({
+            message: `Tasks reassigned from ${staff.fname} to ${newStaff.fname}, and permissions updated.`,
+        });
+
+    } catch (error) {
+        console.error('Error reassigning work:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };

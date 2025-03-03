@@ -31,7 +31,7 @@ const staffSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    default:''
+    default: ''
   },
   password: {
     type: String,
@@ -58,10 +58,27 @@ const staffSchema = new mongoose.Schema({
   coruspondingEmail: {
     type: String,
     required: true,
-    // unique: true,
-    // match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
-  status: { type: Number, default: 0 }
+  status: { type: Number, default: 0 },
+  unavailabilityStatus: {
+    type: String,
+    enum: ['active', 'holiday', 'ill', 'fired'],
+    default: 'active'
+  },
+  unavailablefrom: { type: Date, default: Date.now },
+  unavailableto: { type: Date, default: Date.now },
+  unavailabilityReason: { type: String, default: '' },
+  reassignedTasks: [{
+    taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
+    reassignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+    date: { type: Date, default: Date.now },
+  }],
+  otp: {
+    type: Number,
+    default: 0
+  },
+  otpExpiration: { type: Date, default: undefined },
+
 }, { timestamps: true });
 
 const Staff = mongoose.model('Staff', staffSchema);
